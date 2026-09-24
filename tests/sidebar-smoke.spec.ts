@@ -41,8 +41,9 @@ test('中文任务栏、设置和长期任务可用', async ({ page }) => {
     'section[aria-labelledby="today-heading"] .quick-add',
   )
   await todayQuickAdd.getByLabel(/选择任务颜色/).click()
-  await expect(page.getByRole('button', { name: '红色' })).toBeVisible()
-  await page.getByRole('button', { name: '红色' }).click()
+  const redChoice = page.getByRole('button', { name: '红色', exact: true })
+  await expect(redChoice).toBeVisible()
+  await redChoice.click()
 })
 
 for (const viewport of viewports) {
