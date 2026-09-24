@@ -18,40 +18,40 @@ export type ProductNote = {
 export const platformNotes: ProductNote[] = [
   {
     icon: MonitorCog,
-    title: 'Native shell',
-    text: 'Use Tauri first for a small open-source app; keep Electron as the fallback if overlay APIs become the blocker.',
+    title: '原生外壳',
+    text: '小型开源应用优先使用 Tauri；如果悬浮窗口 API 成为瓶颈，再把 Electron 作为备用方案。',
   },
   {
     icon: Pin,
-    title: 'Everywhere sidebar',
-    text: 'A frameless always-on-top window can attach to the right edge of the active monitor and remember per-screen placement.',
+    title: '随处可用的侧栏',
+    text: '无边框置顶窗口可以贴靠当前显示器右侧，并记住每块屏幕的位置。',
   },
   {
     icon: Command,
-    title: 'Global control',
-    text: 'Desktop builds register Alt + T natively, with Alt + Shift + T as a fallback for shortcut collisions.',
+    title: '全局控制',
+    text: '桌面版本原生注册 Alt + T；快捷键冲突时可使用 Alt + Shift + T。',
   },
 ]
 
 export const runtimeCards: ProductNote[] = [
   {
     icon: Database,
-    title: 'Local-first tasks',
-    text: 'Start with local persistence, then add sync only after the task model is stable.',
+    title: '本地优先任务',
+    text: '先使用本地持久化，任务模型稳定后再增加同步。',
   },
   {
     icon: Cable,
-    title: 'MCP connectors',
-    text: 'Connect GitHub, calendar, notes, files, or project tools through permissioned MCP adapters.',
+    title: 'MCP 连接器',
+    text: '通过受权限控制的 MCP 适配器连接 GitHub、日历、笔记、文件或项目工具。',
   },
   {
     icon: Bot,
-    title: 'AI planning layer',
-    text: 'Let AI summarize inboxes, split work into next actions, and suggest Today without owning the source of truth.',
+    title: 'AI 计划层',
+    text: '让 AI 总结收件箱、拆分下一步行动并提出今天的建议，同时保留任务的真实来源。',
   },
   {
     icon: ShieldCheck,
-    title: 'Permission wall',
-    text: 'Every external read, write, sync, or AI action needs scoped capabilities and visible user approval.',
+    title: '权限边界',
+    text: '每次外部读取、写入、同步或 AI 操作都需要限定权限和清晰的用户批准。',
   },
 ]

@@ -27,17 +27,17 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
     let toggle = MenuItem::with_id(
         app,
         "toggle",
-        "Open / Close Todobar",
+        "打开 / 收起每日计划",
         true,
         Some("Alt+T"),
     )?;
-    let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Quit Todobar", true, None::<&str>)?;
+    let settings = MenuItem::with_id(app, "settings", "设置", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "退出每日计划", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&toggle, &settings, &quit])?;
     let icon = app.default_window_icon().cloned();
 
     let mut tray = TrayIconBuilder::with_id("todobar")
-        .tooltip("Todobar")
+        .tooltip("每日计划")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id().as_ref() {

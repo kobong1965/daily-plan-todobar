@@ -2,7 +2,9 @@ export type Task = {
   id: number
   title: string
   meta: string
-  priority: 'focus' | 'normal' | 'later'
+  /** Kept only so tasks saved by older builds can still be read safely. */
+  priority?: 'focus' | 'normal' | 'later'
+  color?: TaskColor
   kind?: 'task' | 'event'
   reminderAt?: string
   source?: {
@@ -14,24 +16,34 @@ export type Task = {
   done?: boolean
 }
 
+export type TaskColor = 'red' | 'gold' | 'purple' | 'blue' | 'white'
+
+export const TASK_COLOR_OPTIONS: Array<{ value: TaskColor; label: string }> = [
+  { value: 'red', label: '红色' },
+  { value: 'gold', label: '金色' },
+  { value: 'purple', label: '紫色' },
+  { value: 'blue', label: '蓝色' },
+  { value: 'white', label: '白色' },
+]
+
 export const initialToday: Task[] = [
   {
     id: 1,
-    title: 'Design sidebar shell',
-    meta: 'Today · 40 min',
-    priority: 'focus',
+    title: '设计侧栏框架',
+    meta: '今天 · 40 分钟',
+    color: 'red',
   },
   {
     id: 2,
-    title: 'Prototype desktop shortcut',
-    meta: 'Today · Native hook',
-    priority: 'normal',
+    title: '制作桌面快捷方式原型',
+    meta: '今天 · 原生入口',
+    color: 'gold',
   },
   {
     id: 3,
-    title: 'Capture inbox',
-    meta: 'Quick add',
-    priority: 'normal',
+    title: '整理收件箱',
+    meta: '快速添加',
+    color: 'white',
     done: true,
   },
 ]
@@ -39,14 +51,21 @@ export const initialToday: Task[] = [
 export const monthPlan: Task[] = [
   {
     id: 4,
-    title: 'Open source roadmap',
-    meta: 'May · Milestone 0.1',
-    priority: 'focus',
+    title: '开源项目路线图',
+    meta: '五月 · 里程碑 0.1',
+    color: 'purple',
   },
   {
     id: 5,
-    title: 'Later',
-    meta: 'Park ideas without pressure',
-    priority: 'later',
+    title: '稍后处理',
+    meta: '先记录想法，不急着完成',
+    color: 'blue',
   },
 ]
+
+export const longTermTask: Task = {
+  id: 6,
+  title: '长期任务',
+  meta: '长期 · 持续推进',
+  color: 'purple',
+}

@@ -56,8 +56,13 @@ import type {
   ThemePreset,
 } from './sidebarSettings'
 import { scheduleLocalStorageWrite } from './storage'
-import { initialToday, monthPlan } from './tasks'
-import type { Task } from './tasks'
+import {
+  initialToday,
+  longTermTask,
+  monthPlan,
+  TASK_COLOR_OPTIONS,
+} from './tasks'
+import type { Task, TaskColor } from './tasks'
 import { usePersistentTasks } from './usePersistentTasks'
 
 const DRAG_THRESHOLD = 5
@@ -67,6 +72,7 @@ const TASK_STORAGE_KEYS = {
   today: 'todobar.today.v1',
   month: 'todobar.month.v1',
 } as const
+const LONG_TERM_STORAGE_KEY = 'todobar.long-term.v1'
 const CUSTOM_LISTS_STORAGE_KEY = 'todobar.custom-lists.v1'
 const NOTIFIED_REMINDERS_STORAGE_KEY = 'todobar.notified-reminders.v1'
 const SETTINGS_GROUPS_STORAGE_KEY = 'todobar.settings.groups.v1'
@@ -74,88 +80,83 @@ const GMAIL_CONNECTOR_VISIBLE = false
 const TOP_DOCK_MIN_PANEL_WIDTH = 720
 const TOP_DOCK_MAX_PANEL_WIDTH = 1120
 const TOP_DOCK_WIDTH_MULTIPLIER = 2
-const PRIORITY_ORDER: Record<Task['priority'], number> = {
-  focus: 0,
-  normal: 1,
-  later: 2,
-}
 const SECTION_LABELS: Record<SectionId, string> = {
-  calendar: 'Calendar',
-  lists: 'Lists',
-  today: 'Today',
+  calendar: '日历',
+  lists: '清单',
+  today: '今天',
 }
 const THEME_PRESETS = [
   {
     id: 'codex',
-    label: 'Studio',
+    label: '工作室',
     mode: 'light',
-    note: 'Neutral clean',
+    note: '中性简洁',
   },
   {
     id: 'porcelain',
-    label: 'Porcelain',
+    label: '瓷白',
     mode: 'light',
-    note: 'Soft white',
+    note: '柔和白',
   },
   {
     id: 'frost',
-    label: 'Frostline',
+    label: '霜蓝',
     mode: 'light',
-    note: 'Cool blue',
+    note: '清冷蓝',
   },
   {
     id: 'paper',
-    label: 'Paper Trail',
+    label: '纸张',
     mode: 'light',
-    note: 'Warm matte',
+    note: '温暖哑光',
   },
   {
     id: 'clay',
-    label: 'Terra',
+    label: '陶土',
     mode: 'light',
-    note: 'Muted warm',
+    note: '低饱和暖色',
   },
   {
     id: 'blueprint',
-    label: 'Blueprint',
+    label: '蓝图',
     mode: 'light',
-    note: 'Light grid',
+    note: '浅色网格',
   },
   {
     id: 'codex',
-    label: 'Obsidian',
+    label: '曜石',
     mode: 'dark',
-    note: 'Deep neutral',
+    note: '深色中性',
   },
   {
     id: 'carbon',
-    label: 'Carbon',
+    label: '炭黑',
     mode: 'dark',
-    note: 'Soft black',
+    note: '柔和黑',
   },
   {
     id: 'graphite',
-    label: 'Graphite',
+    label: '石墨',
     mode: 'dark',
-    note: 'Deep focus',
+    note: '深度专注',
   },
   {
     id: 'midnight',
-    label: 'Nightfall',
+    label: '夜幕',
     mode: 'dark',
-    note: 'Blue black',
+    note: '蓝黑',
   },
   {
     id: 'clay',
-    label: 'Ember',
+    label: '余烬',
     mode: 'dark',
-    note: 'Warm dark',
+    note: '暖色深调',
   },
   {
     id: 'blueprint',
-    label: 'Gridlock',
+    label: '网格',
     mode: 'dark',
-    note: 'Dark grid',
+    note: '深色网格',
   },
 ] as const satisfies Array<{
   id: ThemePreset
@@ -168,6 +169,7 @@ type ThemePresetOption = (typeof THEME_PRESETS)[number]
 type TaskListId = keyof typeof TASK_STORAGE_KEYS
 type TaskDrafts = Record<TaskListId, string>
 type ReminderDrafts = Record<TaskListId, string>
+type TaskColorDrafts = Record<TaskListId, TaskColor>
 type CollapsedSections = Record<TaskListId, boolean>
 type CalendarEntryMode = 'task' | 'event'
 type SettingsGroupId =
@@ -207,7 +209,7 @@ type ReminderToast = {
 const defaultCustomLists: CustomTaskList[] = [
   {
     id: 'general',
-    title: 'General',
+    title: '常规',
     tasks: [],
     collapsed: false,
   },
@@ -231,48 +233,94 @@ type HandleDragState = {
   latestHandleY: number | null
 }
 
-function sortTasks(tasks: Task[], sortMode: TaskSortMode = 'priority') {
-  return [...tasks].sort((a, b) => {
-    if (Boolean(a.done) !== Boolean(b.done)) {
-      return a.done ? 1 : -1
-    }
+const DEFAULT_TASK_COLOR: TaskColor = 'white'
+const TASK_COLOR_ORDER: Record<TaskColor, number> = {
+  red: 0,
+  gold: 1,
+  purple: 2,
+  blue: 3,
+  white: 4,
+}
 
+function colorForTask(task: Task): TaskColor {
+  const savedColor =
+    typeof task.color === 'string' ? (task.color as string) : ''
+
+  if (
+    savedColor === 'red' ||
+    savedColor === 'gold' ||
+    savedColor === 'purple' ||
+    savedColor === 'blue' ||
+    savedColor === 'white'
+  ) {
+    return savedColor
+  }
+
+  // Migrate colors from the previous picker without rewriting saved tasks.
+  if (savedColor === 'orange') {
+    return 'gold'
+  }
+
+  if (savedColor === 'green' || savedColor === 'gray') {
+    return 'white'
+  }
+
+  // Older tasks only carried priority. Use that value once as a display fallback.
+  if (task.priority === 'focus') {
+    return 'red'
+  }
+
+  if (task.priority === 'later') {
+    return 'white'
+  }
+
+  return 'blue'
+}
+
+function sortTasks(tasks: Task[], sortMode: TaskSortMode = 'color') {
+  return [...tasks].sort((a, b) => {
     if (sortMode === 'newest') {
+      if (Boolean(a.done) !== Boolean(b.done)) {
+        return a.done ? 1 : -1
+      }
+
       return b.id - a.id
     }
 
     if (sortMode === 'oldest') {
+      if (Boolean(a.done) !== Boolean(b.done)) {
+        return a.done ? 1 : -1
+      }
+
       return a.id - b.id
     }
 
-    const priorityDelta = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
+    const colorDelta =
+      TASK_COLOR_ORDER[colorForTask(a)] - TASK_COLOR_ORDER[colorForTask(b)]
 
-    if (priorityDelta !== 0) {
-      return priorityDelta
+    if (colorDelta !== 0) {
+      return colorDelta
+    }
+
+    if (Boolean(a.done) !== Boolean(b.done)) {
+      return a.done ? 1 : -1
     }
 
     return b.id - a.id
   })
 }
 
-function nextPriority(priority: Task['priority']): Task['priority'] {
-  if (priority === 'normal') {
-    return 'focus'
-  }
-
-  if (priority === 'focus') {
-    return 'later'
-  }
-
-  return 'normal'
-}
-
-function createTask(title: string, meta: string, reminderAt?: string): Task {
+function createTask(
+  title: string,
+  meta: string,
+  reminderAt?: string,
+  color: TaskColor = DEFAULT_TASK_COLOR,
+): Task {
   return {
     id: Date.now(),
     title,
     meta,
-    priority: 'normal',
+    color,
     reminderAt: reminderAt || undefined,
   }
 }
@@ -282,7 +330,7 @@ function createGmailTask(suggestion: GmailThreadSuggestion): Task {
     id: Date.now(),
     title: suggestion.subject,
     meta: `Gmail · ${suggestion.from}`,
-    priority: 'normal',
+    color: DEFAULT_TASK_COLOR,
     source: {
       from: suggestion.from,
       threadId: suggestion.threadId,
@@ -297,6 +345,7 @@ function createCalendarTask(
   date: Date,
   reminderAt: string,
   kind: CalendarEntryMode,
+  color: TaskColor = DEFAULT_TASK_COLOR,
 ): Task {
   const isEvent = kind === 'event'
 
@@ -304,8 +353,8 @@ function createCalendarTask(
     id: Date.now(),
     title,
     kind,
-    meta: `${formatCalendarDay(date)} · ${isEvent ? 'Event' : 'Calendar'}`,
-    priority: isEvent ? 'focus' : 'normal',
+    meta: `${formatCalendarDay(date)} · ${isEvent ? '事件' : '日历'}`,
+    color,
     reminderAt,
   }
 }
@@ -375,7 +424,7 @@ function formatReminder(reminderAt?: string) {
     return ''
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('zh-CN', {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
@@ -402,14 +451,14 @@ function parseReminderDate(reminderAt?: string) {
 }
 
 function formatCalendarMonth(date: Date) {
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('zh-CN', {
     month: 'long',
     year: 'numeric',
   }).format(date)
 }
 
 function formatCalendarDay(date: Date) {
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('zh-CN', {
     day: 'numeric',
     month: 'short',
   }).format(date)
@@ -608,7 +657,7 @@ function loadCustomLists() {
       .filter((list) => list && typeof list.id === 'string')
       .map((list) => ({
         id: list.id,
-        title: typeof list.title === 'string' ? list.title : 'List',
+        title: typeof list.title === 'string' ? list.title : '清单',
         tasks: Array.isArray(list.tasks) ? list.tasks : [],
         collapsed: Boolean(list.collapsed),
         showOnToday: Boolean(list.showOnToday),
@@ -693,13 +742,27 @@ function App() {
     monthPlan,
     TASK_STORAGE_KEYS.month,
   )
+  const [longTermTasks, setLongTermTasks] = usePersistentTasks(
+    [longTermTask],
+    LONG_TERM_STORAGE_KEY,
+  )
   const [customLists, setCustomLists] = useState<CustomTaskList[]>(loadCustomLists)
   const [drafts, setDrafts] = useState<TaskDrafts>({ today: '', month: '' })
+  const [colorDrafts, setColorDrafts] = useState<TaskColorDrafts>({
+    today: DEFAULT_TASK_COLOR,
+    month: DEFAULT_TASK_COLOR,
+  })
   const [reminderDrafts, setReminderDrafts] = useState<ReminderDrafts>({
     today: '',
     month: '',
   })
+  const [longTermDraft, setLongTermDraft] = useState('')
+  const [longTermColorDraft, setLongTermColorDraft] =
+    useState<TaskColor>('purple')
   const [customDrafts, setCustomDrafts] = useState<Record<string, string>>({})
+  const [customColorDrafts, setCustomColorDrafts] = useState<
+    Record<string, TaskColor>
+  >({})
   const [customReminderDrafts, setCustomReminderDrafts] = useState<
     Record<string, string>
   >({})
@@ -713,6 +776,50 @@ function App() {
   const notifiedReminderKeys = useRef<Record<string, boolean>>(
     loadNotifiedReminderKeys(),
   )
+  useEffect(() => {
+    const legacyLongTermTasks = monthTasks.filter(
+      (task) =>
+        task.id === longTermTask.id ||
+        (task.title === longTermTask.title && task.meta.startsWith('长期')),
+    )
+
+    if (legacyLongTermTasks.length === 0) {
+      return
+    }
+
+    setMonthTasks((current) =>
+      current.filter(
+        (task) =>
+          task.id !== longTermTask.id &&
+          !(task.title === longTermTask.title && task.meta.startsWith('长期')),
+      ),
+    )
+    setLongTermTasks((current) => {
+      const legacyTask = legacyLongTermTasks[0]
+      const existingIndex = current.findIndex(
+        (task) => task.title === longTermTask.title,
+      )
+
+      if (existingIndex >= 0) {
+        return current.map((task, index) =>
+          index === existingIndex
+            ? {
+                ...task,
+                done: task.done ?? legacyTask.done,
+                color: task.color ?? legacyTask.color,
+              }
+            : task,
+        )
+      }
+
+      const existingIds = new Set(current.map((task) => task.id))
+      const additions = legacyLongTermTasks.filter(
+        (task) => !existingIds.has(task.id),
+      )
+
+      return additions.length > 0 ? [...current, ...additions] : current
+    })
+  }, [monthTasks, setLongTermTasks, setMonthTasks])
   const dismissReminderToast = useCallback((id: string) => {
     setReminderToasts((current) => current.filter((toast) => toast.id !== id))
   }, [])
@@ -724,7 +831,7 @@ function App() {
       listId,
       title: task.title,
       body: `${listTitle} · ${task.meta}`,
-      dueLabel: formatReminder(task.reminderAt) || 'now',
+      dueLabel: formatReminder(task.reminderAt) || '现在',
       reminderAt: task.reminderAt,
       source,
       taskId: task.id,
@@ -760,6 +867,10 @@ function App() {
     () => sortTasks(monthTasks, settings.taskSortMode),
     [monthTasks, settings.taskSortMode],
   )
+  const sortedLongTermTasks = useMemo(
+    () => sortTasks(longTermTasks, settings.taskSortMode),
+    [longTermTasks, settings.taskSortMode],
+  )
   const visibleTodayTasks = useMemo(
     () =>
       settings.showCompleted
@@ -774,15 +885,22 @@ function App() {
         : sortedMonthTasks.filter((task) => !task.done),
     [settings.showCompleted, sortedMonthTasks],
   )
+  const visibleLongTermTasks = useMemo(
+    () =>
+      settings.showCompleted
+        ? sortedLongTermTasks
+        : sortedLongTermTasks.filter((task) => !task.done),
+    [settings.showCompleted, sortedLongTermTasks],
+  )
   const reminderTasks = useMemo(
     (): CalendarTaskRef[] => [
       ...todayTasks.map((task) => ({
-        listTitle: 'Today',
+        listTitle: '今天',
         source: 'today' as const,
         task,
       })),
       ...monthTasks.map((task) => ({
-        listTitle: 'Calendar',
+        listTitle: '日历',
         source: 'month' as const,
         task,
       })),
@@ -1445,6 +1563,23 @@ function App() {
         const { cursorPosition, currentMonitor, getCurrentWindow, monitorFromPoint } =
           await import('@tauri-apps/api/window')
         const appWindow = getCurrentWindow()
+
+        // An expanded native window must remain interactive across its whole
+        // visible surface. Calculating the panel hit box from physical cursor
+        // coordinates is fragile on Windows when the monitor uses DPI scaling:
+        // the webview can be painted in logical pixels while the native window
+        // APIs report physical pixels. In that state the old code could mark
+        // an open panel as click-through, leaving the UI visible but sending
+        // clicks to the application behind it. The closed state still uses the
+        // precise edge hit-test below so the overlay does not block the desktop.
+        if (isOpen) {
+          if (!cancelled && lastIgnored !== false) {
+            lastIgnored = false
+            await appWindow.setIgnoreCursorEvents(false)
+          }
+          return
+        }
+
         const [cursor, position] = await Promise.all([
           cursorPosition(),
           appWindow.outerPosition(),
@@ -1607,6 +1742,10 @@ function App() {
     setReminderDrafts((current) => ({ ...current, [listId]: value }))
   }
 
+  const updateColorDraft = (listId: TaskListId, value: TaskColor) => {
+    setColorDrafts((current) => ({ ...current, [listId]: value }))
+  }
+
   const updateTasks = (
     listId: TaskListId,
     updater: (tasks: Task[]) => Task[],
@@ -1626,13 +1765,18 @@ function App() {
     updateTasks(listId, (tasks) => [
       createTask(
         title,
-        listId === 'today' ? 'Today' : 'Calendar',
+        listId === 'today' ? '今天' : '日历',
         reminderDrafts[listId],
+        colorDrafts[listId],
       ),
       ...tasks,
     ])
     setDrafts((current) => ({ ...current, [listId]: '' }))
     setReminderDrafts((current) => ({ ...current, [listId]: '' }))
+    setColorDrafts((current) => ({
+      ...current,
+      [listId]: DEFAULT_TASK_COLOR,
+    }))
     setCollapsedSections((current) => ({ ...current, [listId]: false }))
     setIsOpen(true)
   }
@@ -1642,7 +1786,7 @@ function App() {
     gmail.ignoreSuggestion(suggestion.threadId, suggestion.subject)
     gmail.recordActivity(
       'convert',
-      `Created local task from Gmail thread: ${suggestion.subject}`,
+      `已从 Gmail 邮件创建本地任务：${suggestion.subject}`,
     )
     setCollapsedSections((current) => ({ ...current, today: false }))
     activateRailSection('today')
@@ -1664,12 +1808,29 @@ function App() {
         selectedCalendarDate,
         reminderDrafts.month || fallbackReminder,
         calendarEntryMode,
+        colorDrafts.month,
       ),
       ...tasks,
     ])
     setDrafts((current) => ({ ...current, month: '' }))
     setReminderDrafts((current) => ({ ...current, month: '' }))
+    setColorDrafts((current) => ({ ...current, month: DEFAULT_TASK_COLOR }))
     setIsOpen(true)
+  }
+
+  const addLongTermTask = () => {
+    const title = longTermDraft.trim()
+
+    if (!title) {
+      return
+    }
+
+    setLongTermTasks((tasks) => [
+      createTask(title, '长期 · 持续推进', undefined, longTermColorDraft),
+      ...tasks,
+    ])
+    setLongTermDraft('')
+    setLongTermColorDraft('purple')
   }
 
   const onDraftKeyDown = (
@@ -1695,13 +1856,33 @@ function App() {
     )
   }
 
-  const cycleTaskPriority = (listId: TaskListId, id: number) => {
+  const setTaskColor = (listId: TaskListId, id: number, color: TaskColor) => {
     updateTasks(listId, (tasks) =>
+      tasks.map((task) => (task.id === id ? { ...task, color } : task)),
+    )
+  }
+
+  const toggleLongTermTask = (id: number) => {
+    setLongTermTasks((tasks) =>
       tasks.map((task) =>
-        task.id === id
-          ? { ...task, priority: nextPriority(task.priority) }
-          : task,
+        task.id === id ? { ...task, done: !task.done } : task,
       ),
+    )
+  }
+
+  const setLongTermTaskColor = (id: number, color: TaskColor) => {
+    setLongTermTasks((tasks) =>
+      tasks.map((task) => (task.id === id ? { ...task, color } : task)),
+    )
+  }
+
+  const deleteLongTermTask = (id: number) => {
+    setLongTermTasks((tasks) => tasks.filter((task) => task.id !== id))
+  }
+
+  const renameLongTermTask = (id: number, title: string) => {
+    setLongTermTasks((tasks) =>
+      tasks.map((task) => (task.id === id ? { ...task, title } : task)),
     )
   }
 
@@ -1768,6 +1949,10 @@ function App() {
     setCustomReminderDrafts((current) => ({ ...current, [listId]: value }))
   }
 
+  const updateCustomColorDraft = (listId: string, value: TaskColor) => {
+    setCustomColorDrafts((current) => ({ ...current, [listId]: value }))
+  }
+
   const updateCustomListTasks = (
     listId: string,
     updater: (tasks: Task[]) => Task[],
@@ -1788,11 +1973,20 @@ function App() {
     }
 
     updateCustomListTasks(listId, (tasks) => [
-      createTask(title, list.title, customReminderDrafts[listId]),
+      createTask(
+        title,
+        list.title,
+        customReminderDrafts[listId],
+        customColorDrafts[listId] ?? DEFAULT_TASK_COLOR,
+      ),
       ...tasks,
     ])
     setCustomDrafts((current) => ({ ...current, [listId]: '' }))
     setCustomReminderDrafts((current) => ({ ...current, [listId]: '' }))
+    setCustomColorDrafts((current) => ({
+      ...current,
+      [listId]: DEFAULT_TASK_COLOR,
+    }))
     setCustomLists((lists) =>
       lists.map((item) =>
         item.id === listId ? { ...item, collapsed: false } : item,
@@ -1817,13 +2011,13 @@ function App() {
     )
   }
 
-  const cycleCustomTaskPriority = (listId: string, taskId: number) => {
+  const setCustomTaskColor = (
+    listId: string,
+    taskId: number,
+    color: TaskColor,
+  ) => {
     updateCustomListTasks(listId, (tasks) =>
-      tasks.map((task) =>
-        task.id === taskId
-          ? { ...task, priority: nextPriority(task.priority) }
-          : task,
-      ),
+      tasks.map((task) => (task.id === taskId ? { ...task, color } : task)),
     )
   }
 
@@ -1928,20 +2122,21 @@ function App() {
     toggleTask(source, taskId)
   }
 
-  const cycleCalendarTaskPriority = (
+  const setCalendarTaskColor = (
     source: CalendarTaskRef['source'],
     listId: string | undefined,
     taskId: number,
+    color: TaskColor,
   ) => {
     if (source === 'custom') {
       if (listId) {
-        cycleCustomTaskPriority(listId, taskId)
+        setCustomTaskColor(listId, taskId, color)
       }
 
       return
     }
 
-    cycleTaskPriority(source, taskId)
+    setTaskColor(source, taskId, color)
   }
 
   const cycleCalendarTaskReminder = (
@@ -2186,10 +2381,10 @@ function App() {
     >
       <section
         className="desktop-preview"
-        aria-label="Todobar desktop preview"
+        aria-label="每日计划桌面预览"
         aria-hidden={isNative}
       >
-        <nav className="system-bar" aria-label="Desktop menu">
+        <nav className="system-bar" aria-label="桌面菜单">
           <div className="window-dots" aria-hidden="true">
             <span />
             <span />
@@ -2197,30 +2392,28 @@ function App() {
           </div>
           <div className="system-title">
             <ListTodo size={16} />
-            <span>Todobar</span>
+            <span>每日计划</span>
           </div>
           <div className="system-actions">
-            <button type="button" aria-label="Search">
+            <button type="button" aria-label="搜索">
               <Search size={16} />
             </button>
-            <button type="button" aria-label="Settings">
+            <button type="button" aria-label="设置">
               <Settings size={16} />
             </button>
           </div>
         </nav>
 
-        <section className="canvas" aria-label="Desktop workspace">
+        <section className="canvas" aria-label="桌面工作区">
           <div className="desk-copy">
             <div className="mark">
               <PanelRightOpen size={22} />
             </div>
-            <h1>Right-edge todo bar for deep work.</h1>
+            <h1>贴靠屏幕边缘的专注任务栏</h1>
             <p>
-              The browser view is only the dev preview. The product target is a
-              native macOS and Windows utility with shortcuts, overlay windows,
-              MCP connectors, and AI planning.
+              浏览器页面仅用于开发预览。正式版本是适用于 macOS 和 Windows 的原生工具，支持快捷键、悬浮窗口、连接器和 AI 计划。
             </p>
-            <div className="shortcut-row" aria-label="Keyboard shortcut">
+            <div className="shortcut-row" aria-label="键盘快捷键">
               <kbd>Alt</kbd>
               <kbd>T</kbd>
             </div>
@@ -2287,7 +2480,7 @@ function App() {
       <button
         className={`edge-handle ${isOpen ? 'is-open' : ''}`}
         type="button"
-        aria-label={isOpen ? 'Close Todobar' : 'Open Todobar'}
+        aria-label={isOpen ? '收起每日计划' : '打开每日计划'}
         aria-expanded={isOpen}
         onPointerDown={onHandlePointerDown}
         onPointerMove={onHandlePointerMove}
@@ -2300,7 +2493,7 @@ function App() {
           <PanelRightClose className="handle-icon-close" size={15} />
         </span>
         {reminderToasts.length > 0 ? (
-          <span className="handle-badge" aria-label={`${reminderToasts.length} reminders`}>
+          <span className="handle-badge" aria-label={`${reminderToasts.length} 条提醒`}>
             {Math.min(reminderToasts.length, 9)}
           </span>
         ) : null}
@@ -2317,11 +2510,11 @@ function App() {
         className={`todo-sidebar ${isOpen ? 'is-open' : ''} ${
           isSettingsOpen ? 'is-settings-open' : ''
         }`}
-        aria-label="Todobar sidebar"
+        aria-label="每日计划侧栏"
         aria-hidden={!isOpen}
       >
         {isSettingsOpen ? (
-          <div className="settings-drawer" role="dialog" aria-label="Settings">
+          <div className="settings-drawer" role="dialog" aria-label="设置">
             <SidebarSettingsPanel
               gmail={gmail}
               settings={settings}
@@ -2338,14 +2531,14 @@ function App() {
                   <Check size={15} />
                 </span>
                 <div>
-                  <strong>Todobar</strong>
+                  <strong>每日计划</strong>
                 </div>
               </div>
             </header>
 
             <section
               className="focus-strip"
-              aria-label={`Today progress ${progressPercent}%`}
+              aria-label={`今天进度 ${progressPercent}%`}
             >
               <span style={{ width: `${progressPercent}%` }} />
             </section>
@@ -2357,7 +2550,8 @@ function App() {
               key={activeRailSection}
             >
               {activeRailSection === 'today' ? (
-                <section
+                <>
+                  <section
                   className="panel-section"
                   aria-labelledby="today-heading"
                   id="today-section"
@@ -2366,9 +2560,9 @@ function App() {
                     <div>
                       <span id="today-heading">
                         <Clock3 size={15} />
-                        Today
+                        今天
                         <em>
-                          {completed} done · {todayTasks.length} total
+                          {completed} 项已完成 · 共 {todayTasks.length} 项
                         </em>
                       </span>
                     </div>
@@ -2376,8 +2570,8 @@ function App() {
                       type="button"
                       aria-label={
                         collapsedSections.today
-                          ? 'Expand Today'
-                          : 'Collapse Today'
+                          ? '展开今天'
+                          : '收起今天'
                       }
                       aria-expanded={!collapsedSections.today}
                       onClick={() => toggleSection('today')}
@@ -2397,12 +2591,14 @@ function App() {
                   >
                     <div className="section-content-inner">
                       <QuickAdd
-                        ariaLabel="Add a task to Today"
+                        ariaLabel="在今天添加任务"
                         value={drafts.today}
+                        colorValue={colorDrafts.today}
                         reminderValue={reminderDrafts.today}
                         suggestedReminderValue=""
-                        placeholder="Add task..."
+                        placeholder="添加任务…"
                         onChange={(value) => updateDraft('today', value)}
+                        onColorChange={(value) => updateColorDraft('today', value)}
                         onReminderChange={(value) =>
                           updateReminderDraft('today', value)
                         }
@@ -2423,7 +2619,7 @@ function App() {
                               task={task}
                               index={index}
                               onToggle={(id) => toggleTask('today', id)}
-                              onPriority={(id) => cycleTaskPriority('today', id)}
+                              onColor={(id, color) => setTaskColor('today', id, color)}
                               onReminder={(id) => cycleTaskReminder('today', id)}
                               onDelete={(id) => deleteTask('today', id)}
                               onRename={(id, title) =>
@@ -2434,18 +2630,18 @@ function App() {
                         ) : (
                           <div className="empty-task-list">
                             <Check size={14} />
-                            <span>No open tasks here.</span>
+                            <span>这里没有未完成的任务。</span>
                           </div>
                         )}
                       </div>
                       {pinnedTodayLists.length > 0 ? (
                         <section
                           className="today-goals"
-                          aria-label="Pinned lists on Today"
+                          aria-label="今天显示的置顶清单"
                         >
                           <div className="mini-heading">
-                            <strong>Pinned lists</strong>
-                            <span>{pinnedTodayLists.length} pinned</span>
+                            <strong>置顶清单</strong>
+                            <span>{pinnedTodayLists.length} 个置顶</span>
                           </div>
                           <div className="pinned-list-stack">
                             {pinnedTodayLists.map((list) => {
@@ -2461,11 +2657,11 @@ function App() {
                                 <section
                                   className="today-goal-list"
                                   key={list.id}
-                                  aria-label={`${list.title} goals`}
+                                  aria-label={`${list.title} 目标`}
                                 >
                                   <div className="today-goal-list-title">
                                     <strong>{list.title}</strong>
-                                    <span>{list.tasks.length} tasks</span>
+                                    <span>{list.tasks.length} 项任务</span>
                                   </div>
                                   {visibleTasks.length > 0 ? (
                                     <div className="task-list compact-task-list pinned-task-list">
@@ -2477,8 +2673,8 @@ function App() {
                                           onToggle={(id) =>
                                             toggleCustomTask(list.id, id)
                                           }
-                                          onPriority={(id) =>
-                                            cycleCustomTaskPriority(list.id, id)
+                                          onColor={(id, color) =>
+                                            setCustomTaskColor(list.id, id, color)
                                           }
                                           onReminder={(id) =>
                                             cycleCustomTaskReminder(list.id, id)
@@ -2494,7 +2690,7 @@ function App() {
                                     </div>
                                   ) : (
                                     <p className="empty-list-note">
-                                      No tasks in this list.
+                                      这个清单里没有任务。
                                     </p>
                                   )}
                                 </section>
@@ -2506,6 +2702,61 @@ function App() {
                     </div>
                   </div>
                 </section>
+                <section
+                  className="panel-section long-term-section"
+                  aria-labelledby="long-term-heading"
+                >
+                  <div className="section-heading">
+                    <div>
+                      <span id="long-term-heading">
+                        <Clock3 size={15} />
+                        长期任务
+                        <em>{longTermTasks.length} 项常驻</em>
+                      </span>
+                    </div>
+                  </div>
+                  <div className="section-content-inner">
+                    <QuickAdd
+                      ariaLabel="添加长期任务"
+                      value={longTermDraft}
+                      colorValue={longTermColorDraft}
+                      reminderValue=""
+                      showReminder={false}
+                      placeholder="添加长期任务…"
+                      onChange={setLongTermDraft}
+                      onColorChange={setLongTermColorDraft}
+                      onReminderChange={() => undefined}
+                      onSubmit={addLongTermTask}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          addLongTermTask()
+                        }
+                      }}
+                    />
+                    <div className="task-list long-term-task-list">
+                      {visibleLongTermTasks.length > 0 ? (
+                        visibleLongTermTasks.map((task, index) => (
+                          <TaskRow
+                            key={task.id}
+                            task={task}
+                            index={index}
+                            showReminder={false}
+                            onToggle={toggleLongTermTask}
+                            onColor={setLongTermTaskColor}
+                            onDelete={deleteLongTermTask}
+                            onRename={renameLongTermTask}
+                          />
+                        ))
+                      ) : (
+                        <div className="empty-task-list">
+                          <Clock3 size={14} />
+                          <span>还没有长期任务。</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  </section>
+                </>
               ) : null}
 
               {activeRailSection === 'calendar' ? (
@@ -2518,15 +2769,15 @@ function App() {
                     <div>
                       <span id="calendar-heading">
                         <CalendarDays size={15} />
-                        Calendar
+                        日历
                         <em>{formatCalendarMonth(calendarCursor)}</em>
                       </span>
                     </div>
-                    <div className="calendar-toolbar" aria-label="Calendar month">
+                    <div className="calendar-toolbar" aria-label="日历月份">
                       <div className="calendar-nav">
                         <button
                           type="button"
-                          aria-label="Previous month"
+                          aria-label="上个月"
                           onClick={() =>
                             setCalendarCursor((current) => addMonths(current, -1))
                           }
@@ -2535,7 +2786,7 @@ function App() {
                         </button>
                         <button
                           type="button"
-                          aria-label="Next month"
+                          aria-label="下个月"
                           onClick={() =>
                             setCalendarCursor((current) => addMonths(current, 1))
                           }
@@ -2546,17 +2797,17 @@ function App() {
                       <button
                         type="button"
                         className="calendar-today-button"
-                        aria-label="Jump to today"
+                        aria-label="跳转到今天"
                         onClick={jumpCalendarToToday}
                       >
-                        Today
+                        今天
                       </button>
                     </div>
                   </div>
 
                   <div className="calendar-board">
                     <div className="calendar-weekdays" aria-hidden="true">
-                      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(
+                      {['一', '二', '三', '四', '五', '六', '日'].map(
                         (day) => (
                           <span key={day}>{day}</span>
                         ),
@@ -2582,7 +2833,7 @@ function App() {
                             .join(' ')}
                           aria-label={`${formatCalendarDay(day.date)}, ${
                             day.taskCount
-                          } scheduled`}
+                          } 项安排`}
                           aria-selected={day.key === selectedCalendarKey}
                           role="gridcell"
                           onClick={() => {
@@ -2615,28 +2866,28 @@ function App() {
                       <strong>{formatCalendarDay(selectedCalendarDate)}</strong>
                       <span>
                         {selectedCalendarTasks.length === 0
-                          ? 'No reminders'
-                          : `${selectedCalendarOpenCount} open · ${selectedCalendarEventCount} events`}
+                          ? '没有提醒'
+                          : `${selectedCalendarOpenCount} 项未完成 · ${selectedCalendarEventCount} 个事件`}
                       </span>
                     </div>
-                    <div className="calendar-day-summary" aria-label="Selected day summary">
+                    <div className="calendar-day-summary" aria-label="所选日期摘要">
                       <span>
                         <Clock3 size={11} />
-                        {selectedCalendarTasks.length} scheduled
+                        {selectedCalendarTasks.length} 项安排
                       </span>
                       <span>
                         <CalendarDays size={11} />
-                        {selectedCalendarEventCount} events
+                        {selectedCalendarEventCount} 个事件
                       </span>
                     </div>
-                    <div className="calendar-entry-mode" aria-label="Calendar entry type">
+                    <div className="calendar-entry-mode" aria-label="日历条目类型">
                       <button
                         type="button"
                         className={calendarEntryMode === 'task' ? 'is-selected' : ''}
                         aria-pressed={calendarEntryMode === 'task'}
                         onClick={() => setCalendarEntryMode('task')}
                       >
-                        Task
+                        任务
                       </button>
                       <button
                         type="button"
@@ -2644,22 +2895,24 @@ function App() {
                         aria-pressed={calendarEntryMode === 'event'}
                         onClick={() => setCalendarEntryMode('event')}
                       >
-                        Event
+                        事件
                       </button>
                     </div>
                     <QuickAdd
-                      ariaLabel="Add a task to selected calendar day"
+                      ariaLabel="在所选日期添加任务"
                       value={drafts.month}
+                      colorValue={colorDrafts.month}
                       reminderValue={
                         reminderDrafts.month
                       }
                       suggestedReminderValue={`${selectedCalendarKey}T09:00`}
                       placeholder={
                         calendarEntryMode === 'event'
-                          ? 'Add event...'
-                          : 'Add task...'
+                          ? '添加事件…'
+                          : '添加任务…'
                       }
                       onChange={(value) => updateDraft('month', value)}
+                      onColorChange={(value) => updateColorDraft('month', value)}
                       onReminderChange={(value) =>
                         updateReminderDraft('month', value)
                       }
@@ -2676,15 +2929,15 @@ function App() {
                                 task={{
                                   ...task,
                                   meta: `${formatReminder(task.reminderAt)} · ${
-                                    task.kind === 'event' ? 'Event' : listTitle
+                                    task.kind === 'event' ? '事件' : listTitle
                                   }`,
                                 }}
                                 index={index}
                                 onToggle={(id) =>
                                   toggleCalendarTask(source, listId, id)
                                 }
-                                onPriority={(id) =>
-                                  cycleCalendarTaskPriority(source, listId, id)
+                                onColor={(id, color) =>
+                                  setCalendarTaskColor(source, listId, id, color)
                                 }
                                 onReminder={(id) =>
                                   cycleCalendarTaskReminder(source, listId, id)
@@ -2703,8 +2956,8 @@ function App() {
                     ) : (
                       <div className="calendar-empty-state">
                         <Clock3 size={14} />
-                        <strong>No reminders here</strong>
-                        <span>Add a task above or pick another day.</span>
+                        <strong>这天没有提醒</strong>
+                        <span>在上方添加任务，或选择其他日期。</span>
                       </div>
                     )}
                   </div>
@@ -2712,8 +2965,8 @@ function App() {
                   {unscheduledMonthTasks.length > 0 ? (
                     <div className="calendar-backlog">
                       <div className="mini-heading">
-                        <strong>Backlog</strong>
-                        <span>{unscheduledMonthTasks.length} open</span>
+                        <strong>待安排</strong>
+                        <span>{unscheduledMonthTasks.length} 项未完成</span>
                       </div>
                       <div className="task-list month-list">
                         {visibleMonthTasks
@@ -2724,7 +2977,7 @@ function App() {
                               task={task}
                               index={index}
                               onToggle={(id) => toggleTask('month', id)}
-                              onPriority={(id) => cycleTaskPriority('month', id)}
+                              onColor={(id, color) => setTaskColor('month', id, color)}
                               onReminder={(id) => cycleTaskReminder('month', id)}
                               onDelete={(id) => deleteTask('month', id)}
                               onRename={(id, title) =>
@@ -2748,8 +3001,8 @@ function App() {
                     <div>
                       <span id="lists-heading">
                         <ListTodo size={15} />
-                        Lists
-                        <em>{customLists.length} custom</em>
+                        清单
+                        <em>{customLists.length} 个自定义</em>
                       </span>
                     </div>
                   </div>
@@ -2757,15 +3010,15 @@ function App() {
                   <div className="quick-add list-create">
                     <ListTodo size={16} />
                     <input
-                      aria-label="Create a custom list"
-                      placeholder="New list..."
+                      aria-label="创建自定义清单"
+                      placeholder="新建清单…"
                       value={newListDraft}
                       onChange={(event) => setNewListDraft(event.target.value)}
                       onKeyDown={onNewListKeyDown}
                     />
                     <button
                       type="button"
-                      aria-label="Create list"
+                      aria-label="创建清单"
                       onClick={addCustomList}
                     >
                       <Plus size={16} />
@@ -2788,7 +3041,7 @@ function App() {
                             {editingListId === list.id ? (
                               <input
                                 className="custom-list-edit-input"
-                                aria-label={`Rename ${list.title}`}
+                                aria-label={`重命名${list.title}`}
                                 value={listTitleDraft}
                                 autoFocus
                                 onBlur={() => commitRenameCustomList(list.id)}
@@ -2823,8 +3076,8 @@ function App() {
                               }`}
                               aria-label={
                                 list.showOnToday
-                                  ? `Remove ${list.title} from Today`
-                                  : `Show ${list.title} on Today`
+                                  ? `从今天移除${list.title}`
+                                  : `在今天显示${list.title}`
                               }
                               aria-pressed={Boolean(list.showOnToday)}
                               onClick={() => toggleCustomListOnToday(list.id)}
@@ -2834,7 +3087,7 @@ function App() {
                             <button
                               type="button"
                               className="edit-button custom-list-edit"
-                              aria-label={`Rename ${list.title}`}
+                              aria-label={`重命名${list.title}`}
                               onClick={() => startRenameCustomList(list)}
                             >
                               <Pencil size={13} />
@@ -2842,7 +3095,7 @@ function App() {
                             <button
                               type="button"
                               className="delete-button custom-list-delete"
-                              aria-label={`Delete ${list.title}`}
+                              aria-label={`删除${list.title}`}
                               aria-expanded={pendingCustomListDelete === list.id}
                               onClick={(event) => {
                                 if (event.shiftKey) {
@@ -2859,22 +3112,22 @@ function App() {
                               <div
                                 className="delete-confirm-popover list-delete-confirm"
                                 role="alertdialog"
-                                aria-label={`Confirm delete ${list.title}`}
+                                aria-label={`确认删除${list.title}`}
                               >
-                                <span>Delete list?</span>
+                                <span>删除清单？</span>
                                 <div>
                                   <button
                                     type="button"
                                     onClick={() => setPendingCustomListDelete(null)}
                                   >
-                                    Cancel
+                                    取消
                                   </button>
                                   <button
                                     type="button"
                                     className="is-danger"
                                     onClick={() => deleteCustomList(list.id)}
                                   >
-                                    Delete
+                                    删除
                                   </button>
                                 </div>
                               </div>
@@ -2889,14 +3142,20 @@ function App() {
                           >
                             <div className="section-content-inner">
                               <QuickAdd
-                                ariaLabel={`Add a task to ${list.title}`}
+                                ariaLabel={`在${list.title}中添加任务`}
                                 value={customDrafts[list.id] ?? ''}
+                                colorValue={
+                                  customColorDrafts[list.id] ?? DEFAULT_TASK_COLOR
+                                }
                                 reminderValue={
                                   customReminderDrafts[list.id] ?? ''
                                 }
-                                placeholder={`Add to ${list.title}...`}
+                                placeholder={`添加到${list.title}…`}
                                 onChange={(value) =>
                                   updateCustomDraft(list.id, value)
+                                }
+                                onColorChange={(value) =>
+                                  updateCustomColorDraft(list.id, value)
                                 }
                                 onReminderChange={(value) =>
                                   updateCustomReminderDraft(list.id, value)
@@ -2916,8 +3175,8 @@ function App() {
                                       onToggle={(id) =>
                                         toggleCustomTask(list.id, id)
                                       }
-                                      onPriority={(id) =>
-                                        cycleCustomTaskPriority(list.id, id)
+                                      onColor={(id, color) =>
+                                        setCustomTaskColor(list.id, id, color)
                                       }
                                       onReminder={(id) =>
                                         cycleCustomTaskReminder(list.id, id)
@@ -2969,7 +3228,7 @@ function ReminderToastStack({
   return (
     <section
       className="reminder-toast-stack"
-      aria-label="Reminder alerts"
+      aria-label="提醒通知"
       aria-live="polite"
       aria-atomic="false"
     >
@@ -2981,24 +3240,24 @@ function ReminderToastStack({
           <div className="reminder-toast-copy">
             <strong>{toast.title}</strong>
             <span>{toast.body}</span>
-            <em>Due {toast.dueLabel}</em>
+            <em>到期：{toast.dueLabel}</em>
           </div>
           <div className="reminder-toast-actions">
             <button
               type="button"
               className="is-subtle"
-              aria-label={`Snooze ${toast.title} 10 minutes`}
+              aria-label={`将${toast.title}延后 10 分钟`}
               onClick={() => onSnooze(toast)}
             >
-              10m
+              10 分钟
             </button>
             <button type="button" onClick={() => onOpen(toast)}>
-              Open
+              打开
             </button>
             <button
               type="button"
               className="is-icon"
-              aria-label={`Dismiss reminder ${toast.title}`}
+              aria-label={`关闭${toast.title}的提醒`}
               onClick={() => onClose(toast.id)}
             >
               <X size={13} />
@@ -3024,14 +3283,14 @@ function SidebarRail({
   onOpenSettings: () => void
 }) {
   return (
-    <nav className="sidebar-rail" aria-label="Todobar navigation">
+    <nav className="sidebar-rail" aria-label="每日计划导航">
       <div className="rail-stack">
         {sectionOrder.map((section) => (
           <button
             type="button"
             key={section}
             className={activeSection === section && !isSettingsOpen ? 'is-active' : ''}
-            aria-label={`Jump to ${SECTION_LABELS[section]}`}
+            aria-label={`跳转到${SECTION_LABELS[section]}`}
             aria-current={activeSection === section && !isSettingsOpen ? 'true' : undefined}
             title={SECTION_LABELS[section]}
             onClick={() => onFocusSection(section)}
@@ -3046,13 +3305,13 @@ function SidebarRail({
       <button
         type="button"
         className={isSettingsOpen ? 'is-active' : ''}
-        aria-label="Sidebar settings"
+        aria-label="侧栏设置"
         aria-pressed={isSettingsOpen}
-        title="Settings"
+        title="设置"
         onClick={onOpenSettings}
       >
         <Settings size={16} />
-        <span>Setup</span>
+        <span>设置</span>
       </button>
     </nav>
   )
@@ -3060,32 +3319,41 @@ function SidebarRail({
 
 function QuickAdd({
   ariaLabel,
+  colorValue,
   value,
   reminderValue,
+  showReminder = true,
   suggestedReminderValue,
   placeholder,
   onChange,
+  onColorChange,
   onReminderChange,
   onSubmit,
   onKeyDown,
 }: {
   ariaLabel: string
+  colorValue: TaskColor
   value: string
   reminderValue: string
+  showReminder?: boolean
   suggestedReminderValue?: string
   placeholder: string
   onChange: (value: string) => void
+  onColorChange: (value: TaskColor) => void
   onReminderChange: (value: string) => void
   onSubmit: () => void
   onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void
 }) {
+  const [isColorOpen, setIsColorOpen] = useState(false)
   const [isReminderOpen, setIsReminderOpen] = useState(false)
-  const hasReminder = Boolean(reminderValue)
+  const hasReminder = showReminder && Boolean(reminderValue)
   const reminderInputValue = reminderValue || suggestedReminderValue || ''
 
   return (
     <div
-      className={`quick-add ${isReminderOpen ? 'is-reminder-open' : ''} ${
+      className={`quick-add ${showReminder ? '' : 'no-reminder'} ${
+        isReminderOpen ? 'is-reminder-open' : ''
+      } ${
         hasReminder ? 'has-reminder' : ''
       }`}
     >
@@ -3105,24 +3373,38 @@ function QuickAdd({
       />
       <button
         type="button"
-        className="reminder-toggle"
-        aria-label={
-          isReminderOpen
-            ? 'Close reminder time'
-            : hasReminder
-              ? 'Edit reminder time'
-              : 'Add reminder time'
-        }
-        aria-pressed={hasReminder}
-        aria-expanded={isReminderOpen}
-        onClick={() => setIsReminderOpen((current) => !current)}
+        className={`color-toggle task-color-${colorValue}`}
+        aria-label={`选择任务颜色：${taskColorLabel(colorValue)}`}
+        aria-expanded={isColorOpen}
+        onClick={() => {
+          setIsColorOpen((current) => !current)
+          setIsReminderOpen(false)
+        }}
       >
-        {hasReminder ? <BellRing size={15} /> : <Bell size={15} />}
+        <span className="task-color-swatch" aria-hidden="true" />
       </button>
+      {showReminder ? (
+        <button
+          type="button"
+          className="reminder-toggle"
+          aria-label={
+            isReminderOpen
+              ? '关闭提醒时间'
+              : hasReminder
+                ? '编辑提醒时间'
+                : '添加提醒时间'
+          }
+          aria-pressed={hasReminder}
+          aria-expanded={isReminderOpen}
+          onClick={() => setIsReminderOpen((current) => !current)}
+        >
+          {hasReminder ? <BellRing size={15} /> : <Bell size={15} />}
+        </button>
+      ) : null}
       <button
         type="button"
         className="submit-task"
-        aria-label="Add task"
+        aria-label="添加任务"
         onClick={() => {
           onSubmit()
           setIsReminderOpen(false)
@@ -3130,48 +3412,59 @@ function QuickAdd({
       >
         <Plus size={16} />
       </button>
-      {isReminderOpen ? (
+      {isColorOpen ? (
+        <div className="quick-add-color-popover">
+          <TaskColorPalette
+            value={colorValue}
+            onChange={(nextColor) => {
+              onColorChange(nextColor)
+              setIsColorOpen(false)
+            }}
+          />
+        </div>
+      ) : null}
+      {showReminder && isReminderOpen ? (
         <div className="reminder-popover">
-          <div className="reminder-presets" aria-label="Reminder presets">
+          <div className="reminder-presets" aria-label="提醒快捷选项">
             <button
               type="button"
-              aria-label="30 minutes from now"
+              aria-label="从现在起 30 分钟后"
               onClick={() =>
                 onReminderChange(reminderPresetValue('soon', reminderInputValue))
               }
             >
-              <strong>30 min</strong>
-              <span>Later</span>
+              <strong>30 分钟</strong>
+              <span>稍后</span>
             </button>
             <button
               type="button"
-              aria-label="Tomorrow at the same time"
+              aria-label="明天同一时间"
               onClick={() =>
                 onReminderChange(
                   reminderPresetValue('tomorrow', reminderInputValue),
                 )
               }
             >
-              <strong>Tomorrow</strong>
-              <span>Same time</span>
+              <strong>明天</strong>
+              <span>同一时间</span>
             </button>
             <button
               type="button"
-              aria-label="Next week at the same time"
+              aria-label="下周同一时间"
               onClick={() =>
                 onReminderChange(
                   reminderPresetValue('nextWeek', reminderInputValue),
                 )
               }
             >
-              <strong>Next week</strong>
-              <span>Same time</span>
+              <strong>下周</strong>
+              <span>同一时间</span>
             </button>
           </div>
           <label>
-            <span>Remind</span>
+            <span>提醒时间</span>
             <input
-              aria-label="Reminder time"
+              aria-label="提醒时间"
               type="datetime-local"
               value={reminderInputValue}
               onChange={(event) => onReminderChange(event.target.value)}
@@ -3180,7 +3473,7 @@ function QuickAdd({
           {hasReminder ? (
             <button
               type="button"
-              aria-label="Clear reminder"
+              aria-label="清除提醒"
               onClick={() => onReminderChange('')}
             >
               <X size={13} />
@@ -3188,6 +3481,41 @@ function QuickAdd({
           ) : null}
         </div>
       ) : null}
+    </div>
+  )
+}
+
+function taskColorLabel(color: TaskColor) {
+  return (
+    TASK_COLOR_OPTIONS.find((option) => option.value === color)?.label ??
+    '白色'
+  )
+}
+
+function TaskColorPalette({
+  value,
+  onChange,
+}: {
+  value: TaskColor
+  onChange: (value: TaskColor) => void
+}) {
+  return (
+    <div className="task-color-palette" aria-label="任务颜色">
+      {TASK_COLOR_OPTIONS.map((option) => (
+        <button
+          type="button"
+          key={option.value}
+          className={`task-color-choice task-color-${option.value} ${
+            value === option.value ? 'is-selected' : ''
+          }`}
+          aria-label={option.label}
+          aria-pressed={value === option.value}
+          onClick={() => onChange(option.value)}
+        >
+          <span className="task-color-swatch" aria-hidden="true" />
+          <span>{option.label}</span>
+        </button>
+      ))}
     </div>
   )
 }
@@ -3284,12 +3612,12 @@ function SidebarSettingsPanel({
     }
 
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setBackdropError('Use PNG, JPG, or WebP.')
+      setBackdropError('请使用 PNG、JPG 或 WebP 图片。')
       return
     }
 
     if (file.size > 1_500_000) {
-      setBackdropError('Keep the image under 1.5 MB.')
+      setBackdropError('图片大小不能超过 1.5 MB。')
       return
     }
 
@@ -3299,7 +3627,7 @@ function SidebarSettingsPanel({
       const result = typeof reader.result === 'string' ? reader.result : ''
 
       if (!result.startsWith('data:image/')) {
-        setBackdropError('Could not read that image.')
+        setBackdropError('无法读取这张图片。')
         return
       }
 
@@ -3310,22 +3638,22 @@ function SidebarSettingsPanel({
       })
     }
 
-    reader.onerror = () => setBackdropError('Could not read that image.')
+    reader.onerror = () => setBackdropError('无法读取这张图片。')
     reader.readAsDataURL(file)
   }
 
   return (
-    <section className="settings-panel" aria-label="Sidebar settings">
+    <section className="settings-panel" aria-label="侧栏设置">
       <div className="settings-panel-header">
         <div>
-          <strong>Todo settings</strong>
+          <strong>任务设置</strong>
         </div>
         <div className="settings-actions">
           <button
             type="button"
             className="mode-toggle"
             aria-label={
-              settings.theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+              settings.theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'
             }
             onClick={() =>
               onChange(getNextThemePatch(settings.theme, settings.visualStyle))
@@ -3335,13 +3663,13 @@ function SidebarSettingsPanel({
           </button>
           <button
             type="button"
-            aria-label="Reset settings"
+            aria-label="重置设置"
             aria-expanded={isResetConfirmOpen}
             onClick={() => setIsResetConfirmOpen((current) => !current)}
           >
             <RotateCcw size={15} />
           </button>
-          <button type="button" aria-label="Close settings" onClick={onClose}>
+          <button type="button" aria-label="关闭设置" onClick={onClose}>
             <X size={15} />
           </button>
         </div>
@@ -3351,13 +3679,13 @@ function SidebarSettingsPanel({
         <div
           className="settings-confirm-popover"
           role="alertdialog"
-          aria-label="Reset settings confirmation"
+          aria-label="确认重置设置"
         >
-          <strong>Reset settings?</strong>
-          <span>Layout, theme, motion, and sizing return to defaults.</span>
+          <strong>重置设置？</strong>
+          <span>布局、主题、动效和尺寸将恢复默认值。</span>
           <div>
             <button type="button" onClick={() => setIsResetConfirmOpen(false)}>
-              Cancel
+              取消
             </button>
             <button
               type="button"
@@ -3367,7 +3695,7 @@ function SidebarSettingsPanel({
                 setIsResetConfirmOpen(false)
               }}
             >
-              Reset
+              重置
             </button>
           </div>
         </div>
@@ -3375,15 +3703,15 @@ function SidebarSettingsPanel({
 
       <SettingsGroup
         id="theme"
-        title="Theme"
+        title="主题"
         icon={<Palette size={12} />}
         collapsed={Boolean(collapsedSettingsGroups.theme)}
         className="settings-appearance"
         onToggle={toggleSettingsGroup}
       >
         <div className="theme-picker-panel">
-          <div className="theme-mode-row" aria-label="Color mode">
-            <span>{settings.theme === 'dark' ? 'Dark mode' : 'Light mode'}</span>
+          <div className="theme-mode-row" aria-label="颜色模式">
+            <span>{settings.theme === 'dark' ? '深色模式' : '浅色模式'}</span>
             <em>{selectedTheme?.note}</em>
           </div>
           <ThemePresetDropdown
@@ -3398,7 +3726,7 @@ function SidebarSettingsPanel({
 
       <SettingsGroup
         id="edge"
-        title="Screen edge"
+        title="屏幕边缘"
         icon={<PanelRightOpen size={12} />}
         collapsed={Boolean(collapsedSettingsGroups.edge)}
         onToggle={toggleSettingsGroup}
@@ -3411,7 +3739,7 @@ function SidebarSettingsPanel({
 
       <SettingsGroup
         id="layout"
-        title="Layout"
+        title="布局"
         icon={<ListTodo size={12} />}
         collapsed={Boolean(collapsedSettingsGroups.layout)}
         onToggle={toggleSettingsGroup}
@@ -3441,18 +3769,18 @@ function SidebarSettingsPanel({
 
       <SettingsGroup
         id="desktop"
-        title="Desktop"
+        title="桌面"
         icon={<Settings size={12} />}
         collapsed={Boolean(collapsedSettingsGroups.desktop)}
         onToggle={toggleSettingsGroup}
       >
         <ToggleSetting
-          label="Launch at login"
+          label="开机启动"
           checked={settings.launchAtLogin}
           onChange={(launchAtLogin) => onChange({ launchAtLogin })}
         />
         <ToggleSetting
-          label="Notifications"
+          label="通知"
           checked={settings.notificationsEnabled}
           onChange={(notificationsEnabled) => onChange({ notificationsEnabled })}
         />
@@ -3461,7 +3789,7 @@ function SidebarSettingsPanel({
       {GMAIL_CONNECTOR_VISIBLE ? (
         <SettingsGroup
           id="connectors"
-          title="Connectors"
+          title="连接器"
           icon={<Mail size={12} />}
           collapsed={Boolean(collapsedSettingsGroups.connectors)}
           onToggle={toggleSettingsGroup}
@@ -3472,7 +3800,7 @@ function SidebarSettingsPanel({
 
       <SettingsGroup
         id="backdrop"
-        title="Backdrop"
+        title="背景图"
         icon={<ImagePlus size={12} />}
         collapsed={Boolean(collapsedSettingsGroups.backdrop)}
         className="settings-backdrop-group"
@@ -3492,7 +3820,7 @@ function SidebarSettingsPanel({
         {settings.backdropImage ? (
           <div className="settings-range-grid">
             <SliderSetting
-              label="Image strength"
+              label="图片强度"
               value={settings.backdropOpacity}
               min={30}
               max={100}
@@ -3501,7 +3829,7 @@ function SidebarSettingsPanel({
               onChange={(backdropOpacity) => onChange({ backdropOpacity })}
             />
             <SliderSetting
-              label="Background dim"
+              label="背景压暗"
               value={settings.backdropDim}
               min={0}
               max={70}
@@ -3510,7 +3838,7 @@ function SidebarSettingsPanel({
               onChange={(backdropDim) => onChange({ backdropDim })}
             />
             <SliderSetting
-              label="Soft blur"
+              label="柔和模糊"
               value={settings.backdropBlur}
               min={0}
               max={18}
@@ -3524,7 +3852,7 @@ function SidebarSettingsPanel({
 
       <SettingsGroup
         id="window"
-        title="Window & handle"
+        title="窗口与边缘按钮"
         icon={<PanelRightClose size={12} />}
         collapsed={Boolean(collapsedSettingsGroups.window)}
         className="settings-size-group"
@@ -3532,7 +3860,7 @@ function SidebarSettingsPanel({
       >
         <div className="deferred-setting">
           <SliderSetting
-            label="Panel width"
+            label="面板宽度"
             value={draftPanelWidth}
             min={320}
             max={560}
@@ -3546,12 +3874,12 @@ function SidebarSettingsPanel({
             disabled={!hasPanelWidthDraft}
             onClick={applyPanelWidth}
           >
-            Save width
+            保存宽度
           </button>
         </div>
         <div className="settings-range-grid">
           <ToggleSetting
-            label="Hover-only tab"
+            label="仅悬停显示按钮"
             checked={settings.tabVisibility === 'hover'}
             onChange={(checked) =>
               onChange({
@@ -3560,7 +3888,7 @@ function SidebarSettingsPanel({
             }
           />
           <SliderSetting
-            label="Visible tab"
+            label="按钮宽度"
             value={settings.tabWidth}
             min={22}
             max={112}
@@ -3569,7 +3897,7 @@ function SidebarSettingsPanel({
             onChange={(tabWidth) => onChange({ tabWidth })}
           />
           <SliderSetting
-            label="Button height"
+            label="按钮高度"
             value={settings.handleHeight}
             min={56}
             max={176}
@@ -3578,7 +3906,7 @@ function SidebarSettingsPanel({
             onChange={(handleHeight) => onChange({ handleHeight })}
           />
           <SliderSetting
-            label="Edge position"
+            label="边缘位置"
             value={settings.handleY}
             min={0}
             max={100}
@@ -3591,7 +3919,7 @@ function SidebarSettingsPanel({
 
       <SettingsGroup
         id="tasks"
-        title="Tasks"
+        title="任务"
         icon={<Check size={12} />}
         collapsed={Boolean(collapsedSettingsGroups.tasks)}
         onToggle={toggleSettingsGroup}
@@ -3601,12 +3929,12 @@ function SidebarSettingsPanel({
           onChange={(taskSortMode) => onChange({ taskSortMode })}
         />
         <ToggleSetting
-          label="Show completed"
+          label="显示已完成"
           checked={settings.showCompleted}
           onChange={(showCompleted) => onChange({ showCompleted })}
         />
         <SliderSetting
-          label="Row height"
+          label="行高"
           value={settings.taskRowHeight}
           min={40}
           max={62}
@@ -3615,7 +3943,7 @@ function SidebarSettingsPanel({
           onChange={(taskRowHeight) => onChange({ taskRowHeight })}
         />
         <SliderSetting
-          label="Row gap"
+          label="行间距"
           value={settings.taskGap}
           min={4}
           max={14}
@@ -3624,7 +3952,7 @@ function SidebarSettingsPanel({
           onChange={(taskGap) => onChange({ taskGap })}
         />
         <SliderSetting
-          label="Text size"
+          label="文字大小"
           value={settings.taskTextSize}
           min={11}
           max={14}
@@ -3636,13 +3964,13 @@ function SidebarSettingsPanel({
 
       <SettingsGroup
         id="feel"
-        title="Feel"
+        title="外观细节"
         icon={<Palette size={12} />}
         collapsed={Boolean(collapsedSettingsGroups.feel)}
         onToggle={toggleSettingsGroup}
       >
         <SliderSetting
-          label="Motion"
+          label="动效"
           value={settings.motionMs}
           min={140}
           max={360}
@@ -3651,7 +3979,7 @@ function SidebarSettingsPanel({
           onChange={(motionMs) => onChange({ motionMs })}
         />
         <SliderSetting
-          label="Corner radius"
+          label="圆角半径"
           value={settings.panelRadius}
           min={12}
           max={28}
@@ -3660,13 +3988,13 @@ function SidebarSettingsPanel({
           onChange={(panelRadius) => onChange({ panelRadius })}
         />
         <SliderSetting
-          label="Panel opacity"
+          label="面板不透明度"
           value={settings.surfaceAlpha}
           min={58}
           max={100}
           step={1}
           suffix="%"
-          description="Lower values let more of the workspace image show through."
+          description="数值越低，越能看到桌面背景。"
           onChange={(surfaceAlpha) => onChange({ surfaceAlpha })}
         />
       </SettingsGroup>
@@ -3720,10 +4048,10 @@ function ConnectorSetting({ gmail }: { gmail: GmailConnectorController }) {
     isConnected && gmail.status.accountEmail
       ? gmail.status.accountEmail
       : needsReconnect
-        ? 'Reconnect required'
+        ? '需要重新连接'
         : isUnconfigured
-          ? 'Gmail login not enabled in this build'
-          : 'Not connected'
+          ? '此版本未启用 Gmail 登录'
+          : '未连接'
 
   return (
     <div className={`connector-setting gmail-connector state-${gmail.status.state}`}>
@@ -3733,7 +4061,7 @@ function ConnectorSetting({ gmail }: { gmail: GmailConnectorController }) {
         </div>
         <div className="connector-copy">
           <strong>Gmail</strong>
-          <span>Read-only inbox suggestions for local Todobar tasks.</span>
+          <span>以只读方式读取收件箱，为本地任务提供建议。</span>
           <em>{statusLabel}</em>
         </div>
         <div className="connector-actions">
@@ -3744,14 +4072,14 @@ function ConnectorSetting({ gmail }: { gmail: GmailConnectorController }) {
                 disabled={gmail.isLoading}
                 onClick={gmail.loadSuggestions}
               >
-                Sync
+                同步
               </button>
               <button
                 type="button"
                 disabled={gmail.isLoading}
                 onClick={gmail.disconnect}
               >
-                Disconnect
+                断开连接
               </button>
             </>
           ) : (
@@ -3761,35 +4089,33 @@ function ConnectorSetting({ gmail }: { gmail: GmailConnectorController }) {
               onClick={gmail.connect}
             >
               {isUnconfigured
-                ? 'OAuth setup missing'
+                ? '缺少 OAuth 配置'
                 : needsReconnect
-                  ? 'Reconnect Gmail'
-                  : 'Connect Gmail'}
+                  ? '重新连接 Gmail'
+                  : '连接 Gmail'}
             </button>
           )}
         </div>
       </div>
 
       <div className="connector-permission-note">
-        <strong>Permission boundary</strong>
+        <strong>权限范围</strong>
         <span>
-          Todobar requests Gmail read-only access. It can read recent unread
-          inbox threads for suggestions, but it cannot send, delete, label, or
-          archive email in this version.
+          每日计划只请求 Gmail 收件箱的只读权限，可读取最近未读邮件用于生成建议，但此版本不能发送、删除、添加标签或归档邮件。
         </span>
       </div>
 
       <div className="connector-status" role="status">
         <span className={isConnected ? 'is-ready' : ''} />
         {gmail.isLoading
-          ? 'Working with Gmail...'
+          ? '正在处理 Gmail…'
           : gmail.error || gmail.status.message}
       </div>
 
-      <div className="connector-activity" aria-label="Gmail connector activity">
+      <div className="connector-activity" aria-label="Gmail 连接器活动记录">
         <div className="mini-heading">
-          <strong>Activity</strong>
-          <span>{gmail.activities.length} events</span>
+          <strong>活动记录</strong>
+          <span>{gmail.activities.length} 个事件</span>
         </div>
         {gmail.activities.length > 0 ? (
           <ol>
@@ -3797,7 +4123,7 @@ function ConnectorSetting({ gmail }: { gmail: GmailConnectorController }) {
               <li key={activity.id}>
                 <span>{activity.detail}</span>
                 <time dateTime={activity.at}>
-                  {new Intl.DateTimeFormat(undefined, {
+                  {new Intl.DateTimeFormat('zh-CN', {
                     hour: '2-digit',
                     minute: '2-digit',
                   }).format(new Date(activity.at))}
@@ -3806,14 +4132,12 @@ function ConnectorSetting({ gmail }: { gmail: GmailConnectorController }) {
             ))}
           </ol>
         ) : (
-          <p>No Gmail reads yet.</p>
+          <p>还没有读取 Gmail。</p>
         )}
       </div>
 
       <p className="connector-advanced-note">
-        This build is missing Todobar's Google OAuth app credentials. Normal
-        users should not create their own Google project; the public app build
-        needs one verified app identity from the maintainer.
+        此版本缺少每日计划的 Google OAuth 应用凭据。普通用户无需创建自己的 Google 项目；正式公开版本需要维护者提供经过验证的应用身份。
       </p>
     </div>
   )
@@ -3838,24 +4162,24 @@ function GmailInboxSuggestions({
   }
 
   return (
-    <section className="gmail-suggestions" aria-label="Inbox suggestions">
+    <section className="gmail-suggestions" aria-label="收件箱建议">
       <div className="gmail-suggestions-header">
         <div>
           <strong>
             <Inbox size={14} />
-            Inbox suggestions
+            收件箱建议
           </strong>
           <span>
             {isConnected && gmail.status.accountEmail
               ? gmail.status.accountEmail
               : needsReconnect
-                ? 'Reconnect Gmail in settings'
-                : 'Read-only Gmail'}
+                ? '请在设置中重新连接 Gmail'
+                : 'Gmail 只读'}
           </span>
         </div>
         <button
           type="button"
-          aria-label="Sync Gmail inbox suggestions"
+          aria-label="同步 Gmail 收件箱建议"
           disabled={!isConnected || gmail.isLoading}
           onClick={gmail.loadSuggestions}
         >
@@ -3864,28 +4188,28 @@ function GmailInboxSuggestions({
       </div>
 
       <div className="gmail-boundary">
-        <span>Readonly</span>
-        <em>No send, delete, labels, or archive actions.</em>
+        <span>只读</span>
+        <em>不能发送、删除、添加标签或归档邮件。</em>
       </div>
 
       {gmail.error || needsReconnect ? (
         <div className="gmail-state-message" role="status">
-          <strong>{needsReconnect ? 'Reconnect needed' : 'Gmail paused'}</strong>
+          <strong>{needsReconnect ? '需要重新连接' : 'Gmail 已暂停'}</strong>
           <span>{gmail.error || gmail.status.message}</span>
         </div>
       ) : null}
 
       {gmail.isLoading ? (
         <div className="gmail-state-message" role="status">
-          <strong>Checking inbox...</strong>
-          <span>Reading recent unread threads only.</span>
+          <strong>正在检查收件箱…</strong>
+          <span>仅读取最近未读邮件。</span>
         </div>
       ) : null}
 
       {!gmail.isLoading && isConnected && gmail.suggestions.length === 0 ? (
         <div className="gmail-state-message">
-          <strong>No unread suggestions</strong>
-          <span>Ignored suggestions stay local on this device.</span>
+          <strong>没有未读建议</strong>
+          <span>忽略的建议只保存在此设备上。</span>
         </div>
       ) : null}
 
@@ -3903,7 +4227,7 @@ function GmailInboxSuggestions({
               </div>
               <div className="gmail-suggestion-actions">
                 <a
-                  aria-label={`Open Gmail thread ${suggestion.subject}`}
+                  aria-label={`打开 Gmail 邮件线程：${suggestion.subject}`}
                   href={suggestion.gmailUrl}
                   rel="noreferrer"
                   target="_blank"
@@ -3914,11 +4238,11 @@ function GmailInboxSuggestions({
                   type="button"
                   onClick={() => onConvert(suggestion)}
                 >
-                  Add task
+                  添加任务
                 </button>
                 <button
                   type="button"
-                  aria-label={`Ignore ${suggestion.subject}`}
+                  aria-label={`忽略${suggestion.subject}`}
                   onClick={() =>
                     gmail.ignoreSuggestion(
                       suggestion.threadId,
@@ -3926,7 +4250,7 @@ function GmailInboxSuggestions({
                     )
                   }
                 >
-                  Ignore
+                  忽略
                 </button>
               </div>
             </article>
@@ -3985,7 +4309,7 @@ function ThemePresetDropdown({
       <button
         type="button"
         className="theme-dropdown-trigger"
-        aria-label="Theme preset"
+        aria-label="主题预设"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((current) => !current)}
@@ -3993,7 +4317,7 @@ function ThemePresetDropdown({
         <ThemeSwatch id={selectedTheme.id} />
         <span className="theme-dropdown-current">
           <strong>{selectedTheme.label}</strong>
-          <em>{options.length} curated presets</em>
+          <em>{options.length} 个精选预设</em>
         </span>
         <ChevronDown
           className="theme-dropdown-chevron"
@@ -4006,14 +4330,14 @@ function ThemePresetDropdown({
         <div
           className="theme-dropdown-menu"
           role="listbox"
-          aria-label="Theme preset"
+          aria-label="主题预设"
         >
           {options.map((preset) => (
             <button
               type="button"
               key={`${preset.mode}-${preset.id}`}
               role="option"
-              aria-label={`Choose ${preset.label}`}
+              aria-label={`选择${preset.label}`}
               aria-selected={value === preset.id}
               className={value === preset.id ? 'is-selected' : ''}
               onClick={() => {
@@ -4065,18 +4389,18 @@ function BackdropSetting({
       </div>
       <div className="backdrop-copy">
         <strong>
-          {settings.backdropImageName || 'No custom backdrop'}
+          {settings.backdropImageName || '未设置背景图'}
         </strong>
         <span>
           {settings.backdropImage
-            ? 'Used softly in preview and sidebar surfaces.'
-            : 'Upload a small local image for the workspace and panel texture.'}
+            ? '背景图会柔和地显示在预览和侧栏表面。'
+            : '上传一张本地小图片，用作工作区和面板纹理。'}
         </span>
         {error ? <em>{error}</em> : null}
       </div>
       <div className="backdrop-actions">
         <label>
-          Upload
+          上传
           <input
             type="file"
             accept="image/png,image/jpeg,image/webp"
@@ -4088,7 +4412,7 @@ function BackdropSetting({
           disabled={!settings.backdropImage}
           onClick={onClear}
         >
-          Clear
+          清除
         </button>
       </div>
     </div>
@@ -4103,36 +4427,36 @@ function DockEdgeSetting({
   onChange: (value: DockEdge) => void
 }) {
   return (
-    <div className="dock-edge-setting" aria-label="Dock edge">
+    <div className="dock-edge-setting" aria-label="停靠边缘">
       <button
         type="button"
         className={value === 'left' ? 'is-selected' : ''}
         aria-pressed={value === 'left'}
-        aria-label="Dock left"
+        aria-label="停靠到左侧"
         onClick={() => onChange('left')}
       >
         <span className="dock-edge-glyph" aria-hidden="true" />
-        <span>Left</span>
+        <span>左侧</span>
       </button>
       <button
         type="button"
         className={value === 'top' ? 'is-selected' : ''}
         aria-pressed={value === 'top'}
-        aria-label="Dock top"
+        aria-label="停靠到顶部"
         onClick={() => onChange('top')}
       >
         <span className="dock-edge-glyph" aria-hidden="true" />
-        <span>Top</span>
+        <span>顶部</span>
       </button>
       <button
         type="button"
         className={value === 'right' ? 'is-selected' : ''}
         aria-pressed={value === 'right'}
-        aria-label="Dock right"
+        aria-label="停靠到右侧"
         onClick={() => onChange('right')}
       >
         <span className="dock-edge-glyph" aria-hidden="true" />
-        <span>Right</span>
+        <span>右侧</span>
       </button>
     </div>
   )
@@ -4146,13 +4470,13 @@ function TaskSortSetting({
   onChange: (value: TaskSortMode) => void
 }) {
   const options: Array<{ label: string; value: TaskSortMode }> = [
-    { label: 'Priority', value: 'priority' },
-    { label: 'Newest', value: 'newest' },
-    { label: 'Oldest', value: 'oldest' },
+    { label: '颜色顺序', value: 'color' },
+    { label: '最新', value: 'newest' },
+    { label: '最早', value: 'oldest' },
   ]
 
   return (
-    <div className="task-sort-setting" aria-label="Task sort order">
+    <div className="task-sort-setting" aria-label="任务排序方式">
       {options.map((option) => (
         <button
           type="button"
@@ -4181,9 +4505,9 @@ function SectionOrderSetting({
   const [pointerDraggingSection, setPointerDraggingSection] =
     useState<SectionId | null>(null)
   const labels: Record<SectionId, string> = {
-    calendar: 'Calendar',
-    lists: 'Lists',
-    today: 'Today',
+    calendar: '日历',
+    lists: '清单',
+    today: '今天',
   }
   const onDragOverRow = (
     event: DragEvent<HTMLDivElement>,
@@ -4214,7 +4538,7 @@ function SectionOrderSetting({
   }, [pointerDraggingSection])
 
   return (
-    <div className="section-order-list" aria-label="Section order">
+    <div className="section-order-list" aria-label="区块顺序">
       {order.map((section, index) => (
         <div
           className={`section-order-row ${
@@ -4264,7 +4588,7 @@ function SectionOrderSetting({
           <div>
             <button
               type="button"
-              aria-label={`Move ${labels[section]} up`}
+              aria-label={`将${labels[section]}上移`}
               disabled={index === 0}
               onClick={() => onMove(section, -1)}
             >
@@ -4272,7 +4596,7 @@ function SectionOrderSetting({
             </button>
             <button
               type="button"
-              aria-label={`Move ${labels[section]} down`}
+              aria-label={`将${labels[section]}下移`}
               disabled={index === order.length - 1}
               onClick={() => onMove(section, 1)}
             >
@@ -4353,32 +4677,41 @@ function SliderSetting({
 const TaskRow = memo(function TaskRow({
   task,
   index = 0,
+  showReminder = true,
   onToggle,
-  onPriority,
+  onColor,
   onReminder,
   onDelete,
   onRename,
 }: {
   task: Task
   index?: number
+  showReminder?: boolean
   onToggle?: (id: number) => void
-  onPriority?: (id: number) => void
+  onColor?: (id: number, color: TaskColor) => void
   onReminder?: (id: number) => void
   onDelete?: (id: number) => void
   onRename?: (id: number, title: string) => void
 }) {
   const [isEditing, setIsEditing] = useState(false)
+  const [isColorOpen, setIsColorOpen] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [togglePulse, setTogglePulse] = useState<'complete' | 'open' | null>(null)
   const [draft, setDraft] = useState(task.title)
   const pulseTimeout = useRef<number | null>(null)
-  const priorityLabel =
-    task.priority === 'focus'
-      ? 'Focus'
-      : task.priority === 'later'
-        ? 'Later'
-        : 'Task'
   const reminderLabel = formatReminder(task.reminderAt)
+  const taskColor = colorForTask(task)
+  const visibleMeta = task.meta
+    .split('·')
+    .map((part) => part.trim())
+    .filter((part) => part && part !== '今天')
+    .join(' · ')
+  const hasTaskDetails = Boolean(
+    visibleMeta ||
+      task.kind === 'event' ||
+      reminderLabel ||
+      (task.source?.type === 'gmail' && task.source.url),
+  )
   const commitRename = () => {
     const nextTitle = draft.trim()
 
@@ -4426,7 +4759,7 @@ const TaskRow = memo(function TaskRow({
 
   return (
     <article
-      className={`task-row priority-${task.priority} ${
+      className={`task-row task-color-${taskColor} ${
         task.done ? 'is-complete' : ''
       } ${togglePulse ? `is-pulse-${togglePulse}` : ''}`}
       style={{ '--row-delay': `${Math.min(index, 8) * 18}ms` } as CSSProperties}
@@ -4434,7 +4767,7 @@ const TaskRow = memo(function TaskRow({
       <button
         type="button"
         className="check-button"
-        aria-label={task.done ? `Mark ${task.title} open` : `Complete ${task.title}`}
+        aria-label={task.done ? `将${task.title}标记为未完成` : `完成${task.title}`}
         onClick={toggleTaskDone}
       >
         {task.done ? <Check size={13} /> : <Circle size={13} />}
@@ -4443,7 +4776,7 @@ const TaskRow = memo(function TaskRow({
         {isEditing ? (
           <input
             className="task-edit-input"
-            aria-label={`Edit ${task.title}`}
+            aria-label={`编辑${task.title}`}
             value={draft}
             autoFocus
             onBlur={commitRename}
@@ -4461,37 +4794,39 @@ const TaskRow = memo(function TaskRow({
         ) : (
           <strong className={task.done ? 'is-done' : ''}>{task.title}</strong>
         )}
-        <span>
-          {task.meta}
-          {task.kind === 'event' ? (
-            <em className="task-kind-pill">Event</em>
-          ) : null}
-          {reminderLabel ? (
-            <em className="task-reminder">
-              <Bell size={10} />
-              {reminderLabel}
-            </em>
-          ) : null}
-          {task.source?.type === 'gmail' && task.source.url ? (
-            <a
-              className="task-source-link"
-              href={task.source.url}
-              rel="noreferrer"
-              target="_blank"
-              onClick={(event) => event.stopPropagation()}
-            >
-              Gmail
-            </a>
-          ) : null}
-        </span>
+        {hasTaskDetails ? (
+          <span>
+            {visibleMeta}
+            {task.kind === 'event' ? (
+              <em className="task-kind-pill">事件</em>
+            ) : null}
+            {reminderLabel ? (
+              <em className="task-reminder">
+                <Bell size={10} />
+                {reminderLabel}
+              </em>
+            ) : null}
+            {task.source?.type === 'gmail' && task.source.url ? (
+              <a
+                className="task-source-link"
+                href={task.source.url}
+                rel="noreferrer"
+                target="_blank"
+                onClick={(event) => event.stopPropagation()}
+              >
+                Gmail
+              </a>
+            ) : null}
+          </span>
+        ) : null}
       </div>
       <div className="row-actions">
         {onRename ? (
           <button
             type="button"
             className="edit-button"
-            data-tooltip="Edit"
-            aria-label={`Edit ${task.title}`}
+            data-tooltip="编辑"
+            aria-label={`编辑${task.title}`}
             onClick={() => {
               setDraft(task.title)
               setIsEditing(true)
@@ -4500,59 +4835,75 @@ const TaskRow = memo(function TaskRow({
             <Pencil size={13} />
           </button>
         ) : null}
-        <button
-          type="button"
-          className="priority-button"
-          data-tooltip="Priority"
-          aria-label={`Priority: ${priorityLabel}. Click to change`}
-          onClick={() => onPriority?.(task.id)}
-        >
-          <span className="priority-dot" aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          className={`reminder-button ${task.reminderAt ? 'is-set' : ''}`}
-          data-tooltip={task.reminderAt ? 'Reminder set' : 'Remind'}
-          aria-label={
-            task.reminderAt
-              ? `Reminder set for ${reminderLabel}. Click to change`
-              : `Add reminder for ${task.title}`
-          }
-          onClick={() => onReminder?.(task.id)}
-        >
-          {task.reminderAt ? <BellRing size={13} /> : <Bell size={13} />}
-        </button>
+        {onColor ? (
+          <button
+            type="button"
+            className={`color-button task-color-${taskColor}`}
+            data-tooltip="颜色"
+            aria-label={`颜色：${taskColorLabel(taskColor)}。点击更改`}
+            aria-expanded={isColorOpen}
+            onClick={() => setIsColorOpen((current) => !current)}
+          >
+            <span className="task-color-swatch" aria-hidden="true" />
+          </button>
+        ) : null}
+        {showReminder ? (
+          <button
+            type="button"
+            className={`reminder-button ${task.reminderAt ? 'is-set' : ''}`}
+            data-tooltip={task.reminderAt ? '已设置提醒' : '提醒'}
+            aria-label={
+              task.reminderAt
+                ? `提醒时间为${reminderLabel}。点击修改`
+                : `为${task.title}添加提醒`
+            }
+            onClick={() => onReminder?.(task.id)}
+          >
+            {task.reminderAt ? <BellRing size={13} /> : <Bell size={13} />}
+          </button>
+        ) : null}
         <button
           type="button"
           className="delete-button"
-          data-tooltip="Delete"
-          aria-label={`Delete ${task.title}`}
+          data-tooltip="删除"
+          aria-label={`删除${task.title}`}
           aria-expanded={isDeleteConfirmOpen}
           onClick={requestDelete}
         >
           <Trash2 size={13} />
         </button>
       </div>
+      {onColor && isColorOpen ? (
+        <div className="task-color-popover">
+          <TaskColorPalette
+            value={taskColor}
+            onChange={(nextColor) => {
+              onColor(task.id, nextColor)
+              setIsColorOpen(false)
+            }}
+          />
+        </div>
+      ) : null}
       {isDeleteConfirmOpen ? (
         <div
           className="delete-confirm-popover"
           role="alertdialog"
-          aria-label={`Confirm delete ${task.title}`}
+          aria-label={`确认删除${task.title}`}
         >
-          <span>Delete task?</span>
+          <span>删除任务？</span>
           <div>
             <button
               type="button"
               onClick={() => setIsDeleteConfirmOpen(false)}
             >
-              Cancel
+              取消
             </button>
             <button
               type="button"
               className="is-danger"
               onClick={() => onDelete?.(task.id)}
             >
-              Delete
+              删除
             </button>
           </div>
         </div>

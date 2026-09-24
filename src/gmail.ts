@@ -73,7 +73,7 @@ const isTauriRuntime = () =>
 
 const defaultDisconnectedStatus: GmailConnectionStatus = {
   accountEmail: null,
-  message: 'Connect Gmail to review unread inbox suggestions.',
+  message: '连接 Gmail 以查看未读收件箱建议。',
   scope: GMAIL_SCOPE,
   state: 'disconnected',
   syncState: 'idle',
@@ -81,19 +81,19 @@ const defaultDisconnectedStatus: GmailConnectionStatus = {
 
 const defaultMockSuggestions: GmailThreadSuggestion[] = [
   {
-    date: 'Today',
+    date: '今天',
     from: 'Maya Chen',
     gmailUrl: 'https://mail.google.com/mail/u/0/#inbox/mock-thread-1',
-    snippet: 'Can you turn the desktop sidebar review into a short action list?',
-    subject: 'Review Todobar demo notes',
+    snippet: '可以把桌面侧栏评审整理成一份简短的行动清单吗？',
+    subject: '评审每日计划演示笔记',
     threadId: 'mock-thread-1',
   },
   {
-    date: 'Today',
+    date: '今天',
     from: 'GitHub',
     gmailUrl: 'https://mail.google.com/mail/u/0/#inbox/mock-thread-2',
-    snippet: 'One release checklist comment still needs a follow-up.',
-    subject: 'Open-source release follow-up',
+    snippet: '发布检查清单中还有一条评论需要跟进。',
+    subject: '跟进开源发布事项',
     threadId: 'mock-thread-2',
   },
 ]
@@ -137,7 +137,7 @@ function loadBrowserMockStatus(): GmailConnectionStatus {
   if (forcedState === 'connected' || stored.state === 'connected') {
     return {
       accountEmail: stored.accountEmail ?? 'alex@example.com',
-      message: 'Gmail mock is connected for browser QA.',
+      message: '浏览器测试用 Gmail 模拟连接已建立。',
       scope: GMAIL_SCOPE,
       state: 'connected',
       syncState: 'idle',
@@ -147,7 +147,7 @@ function loadBrowserMockStatus(): GmailConnectionStatus {
   if (forcedState === 'revoked' || stored.state === 'needs_reconnect') {
     return {
       accountEmail: stored.accountEmail ?? 'alex@example.com',
-      message: 'Gmail authorization expired. Reconnect Gmail.',
+      message: 'Gmail 授权已过期，请重新连接。',
       scope: GMAIL_SCOPE,
       state: 'needs_reconnect',
       syncState: 'error',
@@ -159,7 +159,7 @@ function loadBrowserMockStatus(): GmailConnectionStatus {
       accountEmail: null,
       message:
         stored.message ??
-        "Gmail login is built, but this app build does not include Todobar's Google OAuth client ID yet.",
+        'Gmail 登录功能已接入，但此版本还没有配置每日计划的 Google OAuth 客户端 ID。',
       scope: GMAIL_SCOPE,
       state: 'unconfigured',
       syncState: 'idle',
@@ -269,7 +269,7 @@ export function useGmailConnector(): GmailConnectorController {
         )
 
         setSuggestions(filtered)
-        recordActivity('read', `Read ${filtered.length} mocked unread Gmail threads.`)
+        recordActivity('read', `读取了 ${filtered.length} 条模拟未读 Gmail 邮件。`)
         return
       }
 
@@ -284,7 +284,7 @@ export function useGmailConnector(): GmailConnectorController {
 
       setStatus({
         accountEmail: response.accountEmail,
-        message: `Last sync found ${filtered.length} unread suggestions.`,
+        message: `最近一次同步找到 ${filtered.length} 条未读建议。`,
         scope: GMAIL_SCOPE,
         state: 'connected',
         syncState: 'idle',
@@ -292,7 +292,7 @@ export function useGmailConnector(): GmailConnectorController {
       setSuggestions(filtered)
       recordActivity(
         'read',
-        `Read ${response.suggestions.length} unread Gmail threads.`,
+        `读取了 ${response.suggestions.length} 条未读 Gmail 邮件。`,
       )
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : String(reason)
@@ -303,7 +303,7 @@ export function useGmailConnector(): GmailConnectorController {
       setStatus((current) => ({
         ...current,
         message: needsReconnect
-          ? 'Gmail authorization expired. Reconnect Gmail.'
+          ? 'Gmail 授权已过期，请重新连接。'
           : message,
         state: needsReconnect ? 'needs_reconnect' : 'error',
         syncState: 'error',
@@ -322,7 +322,7 @@ export function useGmailConnector(): GmailConnectorController {
       if (!isTauriRuntime()) {
         const next = {
           accountEmail: 'alex@example.com',
-          message: 'Gmail mock is connected for browser QA.',
+          message: '浏览器测试用 Gmail 模拟连接已建立。',
           scope: GMAIL_SCOPE,
           state: 'connected' as const,
           syncState: 'idle' as const,
@@ -330,7 +330,7 @@ export function useGmailConnector(): GmailConnectorController {
 
         saveJson(GMAIL_MOCK_STORAGE_KEY, next)
         setStatus(next)
-        recordActivity('connect', 'Connected Gmail mock for browser QA.')
+        recordActivity('connect', '已建立浏览器测试用 Gmail 模拟连接。')
         return
       }
 
@@ -339,7 +339,7 @@ export function useGmailConnector(): GmailConnectorController {
       setStatus(next)
       recordActivity(
         'connect',
-        `Connected Gmail read-only${next.accountEmail ? ` for ${next.accountEmail}` : ''}.`,
+        `已建立 Gmail 只读连接${next.accountEmail ? `（${next.accountEmail}）` : ''}。`,
       )
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : String(reason)
@@ -370,7 +370,7 @@ export function useGmailConnector(): GmailConnectorController {
 
       setStatus(defaultDisconnectedStatus)
       setSuggestions([])
-      recordActivity('disconnect', 'Disconnected Gmail and removed stored OAuth tokens.')
+      recordActivity('disconnect', '已断开 Gmail，并删除保存的 OAuth 令牌。')
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : String(reason)
 
@@ -392,7 +392,7 @@ export function useGmailConnector(): GmailConnectorController {
       setSuggestions((current) =>
         current.filter((suggestion) => suggestion.threadId !== threadId),
       )
-      recordActivity('ignore', `Ignored Gmail suggestion: ${subject}`)
+      recordActivity('ignore', `已忽略 Gmail 建议：${subject}`)
     },
     [recordActivity],
   )

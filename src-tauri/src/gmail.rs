@@ -136,7 +136,7 @@ fn oauth_config() -> Result<GmailOAuthConfig, String> {
                 .filter(|value| !value.trim().is_empty())
         })
         .ok_or_else(|| {
-            "Gmail OAuth is not configured in this build. Maintainers need to set TODOBAR_GMAIL_CLIENT_ID.".to_string()
+            "此版本未配置 Gmail OAuth。请由维护者设置 TODOBAR_GMAIL_CLIENT_ID。".to_string()
         })?;
 
     let client_secret = std::env::var("TODOBAR_GMAIL_CLIENT_SECRET")
@@ -156,7 +156,7 @@ fn oauth_config() -> Result<GmailOAuthConfig, String> {
 
 fn keyring_entry() -> Result<keyring::Entry, String> {
     keyring::Entry::new(KEYRING_SERVICE, KEYRING_USER)
-        .map_err(|error| format!("Could not open OS credential store: {error}"))
+        .map_err(|error| format!("无法打开系统凭据存储：{error}"))
 }
 
 fn read_stored_token() -> Result<Option<StoredGmailToken>, String> {
@@ -165,20 +165,20 @@ fn read_stored_token() -> Result<Option<StoredGmailToken>, String> {
     match entry.get_password() {
         Ok(password) => serde_json::from_str::<StoredGmailToken>(&password)
             .map(Some)
-            .map_err(|error| format!("Stored Gmail token is unreadable: {error}")),
+            .map_err(|error| format!("保存的 Gmail 令牌无法读取：{error}")),
         Err(keyring::Error::NoEntry) => Ok(None),
-        Err(error) => Err(format!("Could not read Gmail token from OS credential store: {error}")),
+        Err(error) => Err(format!("无法从系统凭据存储读取 Gmail 令牌：{error}")),
     }
 }
 
 fn write_stored_token(token: &StoredGmailToken) -> Result<(), String> {
     let entry = keyring_entry()?;
     let encoded = serde_json::to_string(token)
-        .map_err(|error| format!("Could not serialize Gmail token: {error}"))?;
+        .map_err(|error| format!("无法序列化 Gmail 令牌：{error}"))?;
 
     entry
         .set_password(&encoded)
-        .map_err(|error| format!("Could not save Gmail token to OS credential store: {error}"))
+        .map_err(|error| format!("无法将 Gmail 令牌保存到系统凭据存储：{error}"))
 }
 
 fn delete_stored_token() -> Result<(), String> {
@@ -186,7 +186,7 @@ fn delete_stored_token() -> Result<(), String> {
 
     match entry.delete_credential() {
         Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
-        Err(error) => Err(format!("Could not remove Gmail token from OS credential store: {error}")),
+        Err(error) => Err(format!("无法从系统凭据存储删除 Gmail 令牌：{error}")),
     }
 }
 
@@ -200,7 +200,7 @@ fn status_from_token(token: Option<StoredGmailToken>) -> Result<GmailConnectionS
             } else {
                 "idle".to_string()
             },
-            message: "Gmail is connected read-only.".to_string(),
+            message: "Gmail 已建立只读连接。".to_string(),
             scope: GMAIL_SCOPE.to_string(),
         });
     }
@@ -210,7 +210,7 @@ fn status_from_token(token: Option<StoredGmailToken>) -> Result<GmailConnectionS
             state: "unconfigured".to_string(),
             account_email: None,
             sync_state: "idle".to_string(),
-            message: "Gmail login is built, but this app build does not include Todobar's Google OAuth client ID yet.".to_string(),
+            message: "Gmail 登录功能已接入，但此版本还没有配置每日计划的 Google OAuth 客户端 ID。".to_string(),
             scope: GMAIL_SCOPE.to_string(),
         });
     }
@@ -219,7 +219,7 @@ fn status_from_token(token: Option<StoredGmailToken>) -> Result<GmailConnectionS
         state: "disconnected".to_string(),
         account_email: None,
         sync_state: "idle".to_string(),
-        message: "Connect Gmail to review unread inbox suggestions.".to_string(),
+        message: "连接 Gmail 以查看未读收件箱建议。".to_string(),
         scope: GMAIL_SCOPE.to_string(),
     })
 }
@@ -238,13 +238,13 @@ fn pkce_challenge(verifier: &str) -> String {
 fn listen_for_oauth_callback(listener: TcpListener, expected_state: String) -> Result<String, String> {
     listener
         .set_nonblocking(true)
-        .map_err(|error| format!("Could not prepare local OAuth callback: {error}"))?;
+        .map_err(|error| format!("无法准备本地 OAuth 回调：{error}"))?;
 
     let deadline = Instant::now() + Duration::from_secs(180);
 
     loop {
         if Instant::now() > deadline {
-            return Err("Gmail sign-in timed out. Try Connect Gmail again.".to_string());
+            return Err("Gmail 登录超时，请重新点击连接 Gmail。".to_string());
         }
 
         match listener.accept() {
@@ -253,15 +253,15 @@ fn listen_for_oauth_callback(listener: TcpListener, expected_state: String) -> R
                 let mut buffer = [0_u8; 8192];
                 let read_count = stream
                     .read(&mut buffer)
-                    .map_err(|error| format!("Could not read OAuth callback: {error}"))?;
+                    .map_err(|error| format!("无法读取 OAuth 回调：{error}"))?;
                 let request = String::from_utf8_lossy(&buffer[..read_count]);
                 let request_line = request.lines().next().unwrap_or_default();
                 let target = request_line
                     .split_whitespace()
                     .nth(1)
-                    .ok_or_else(|| "OAuth callback was malformed.".to_string())?;
+                    .ok_or_else(|| "OAuth 回调格式错误。".to_string())?;
                 let callback_url = Url::parse(&format!("http://127.0.0.1{target}"))
-                    .map_err(|error| format!("OAuth callback URL was malformed: {error}"))?;
+                    .map_err(|error| format!("OAuth 回调 URL 格式错误：{error}"))?;
                 let mut code = None;
                 let mut state = None;
                 let mut oauth_error = None;
@@ -276,9 +276,9 @@ fn listen_for_oauth_callback(listener: TcpListener, expected_state: String) -> R
                 }
 
                 let html = if oauth_error.is_none() && state.as_deref() == Some(expected_state.as_str()) {
-                    "<!doctype html><title>Todobar Gmail connected</title><body style=\"font-family:system-ui;margin:40px\"><h1>Gmail connected</h1><p>You can close this tab and return to Todobar.</p></body>"
+                    "<!doctype html><meta charset=\"utf-8\"><title>每日计划已连接 Gmail</title><body style=\"font-family:system-ui;margin:40px\"><h1>Gmail 已连接</h1><p>可以关闭此标签页并返回每日计划。</p></body>"
                 } else {
-                    "<!doctype html><title>Todobar Gmail sign-in failed</title><body style=\"font-family:system-ui;margin:40px\"><h1>Gmail sign-in failed</h1><p>Please return to Todobar and try again.</p></body>"
+                    "<!doctype html><meta charset=\"utf-8\"><title>每日计划 Gmail 登录失败</title><body style=\"font-family:system-ui;margin:40px\"><h1>Gmail 登录失败</h1><p>请返回每日计划后重试。</p></body>"
                 };
                 let response = format!(
                     "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -289,19 +289,19 @@ fn listen_for_oauth_callback(listener: TcpListener, expected_state: String) -> R
                 let _ = stream.flush();
 
                 if let Some(error) = oauth_error {
-                    return Err(format!("Google rejected the Gmail sign-in: {error}"));
+                    return Err(format!("Google 拒绝了 Gmail 登录：{error}"));
                 }
 
                 if state.as_deref() != Some(expected_state.as_str()) {
-                    return Err("Gmail sign-in state did not match. Try again.".to_string());
+                    return Err("Gmail 登录状态不匹配，请重试。".to_string());
                 }
 
-                return code.ok_or_else(|| "Google did not return an OAuth code.".to_string());
+                return code.ok_or_else(|| "Google 没有返回 OAuth code。".to_string());
             }
             Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                 thread::sleep(Duration::from_millis(100));
             }
-            Err(error) => return Err(format!("OAuth callback failed: {error}")),
+            Err(error) => return Err(format!("OAuth 回调失败：{error}")),
         }
     }
 }
@@ -329,17 +329,17 @@ fn exchange_code_for_token(
         .post(GOOGLE_TOKEN_URL)
         .form(&form)
         .send()
-        .map_err(|error| format!("Could not exchange Gmail OAuth code: {error}"))?;
+        .map_err(|error| format!("无法交换 Gmail OAuth code：{error}"))?;
     let status = response.status();
 
     if !status.is_success() {
         let body = response.text().unwrap_or_default();
-        return Err(format!("Google token exchange failed ({status}): {body}"));
+        return Err(format!("Google 令牌交换失败（{status}）：{body}"));
     }
 
     response
         .json::<GoogleTokenResponse>()
-        .map_err(|error| format!("Could not parse Google token response: {error}"))
+        .map_err(|error| format!("无法解析 Google 令牌响应：{error}"))
 }
 
 fn refresh_access_token(client: &Client, token: &StoredGmailToken) -> Result<StoredGmailToken, String> {
@@ -358,19 +358,19 @@ fn refresh_access_token(client: &Client, token: &StoredGmailToken) -> Result<Sto
         .post(GOOGLE_TOKEN_URL)
         .form(&form)
         .send()
-        .map_err(|error| format!("Could not refresh Gmail access: {error}"))?;
+        .map_err(|error| format!("无法刷新 Gmail 访问权限：{error}"))?;
     let status = response.status();
 
     if !status.is_success() {
         let body = response.text().unwrap_or_default();
         return Err(format!(
-            "Gmail authorization needs reconnect ({status}). Google response: {body}"
+            "Gmail 授权需要重新连接（{status}）。Google 响应：{body}"
         ));
     }
 
     let refreshed = response
         .json::<GoogleTokenResponse>()
-        .map_err(|error| format!("Could not parse refreshed Gmail token: {error}"))?;
+        .map_err(|error| format!("无法解析刷新的 Gmail 令牌：{error}"))?;
     let next = StoredGmailToken {
         account_email: token.account_email.clone(),
         access_token: refreshed.access_token,
@@ -385,7 +385,7 @@ fn refresh_access_token(client: &Client, token: &StoredGmailToken) -> Result<Sto
 }
 
 fn ensure_access_token(client: &Client) -> Result<StoredGmailToken, String> {
-    let token = read_stored_token()?.ok_or_else(|| "Gmail is not connected.".to_string())?;
+    let token = read_stored_token()?.ok_or_else(|| "Gmail 尚未连接。".to_string())?;
 
     if token.expires_at_ms > now_ms() + 60_000 {
         return Ok(token);
@@ -399,17 +399,17 @@ fn fetch_profile(client: &Client, access_token: &str) -> Result<GmailProfileResp
         .get(GMAIL_PROFILE_URL)
         .bearer_auth(access_token)
         .send()
-        .map_err(|error| format!("Could not read Gmail profile: {error}"))?;
+        .map_err(|error| format!("无法读取 Gmail 账户资料：{error}"))?;
     let status = response.status();
 
     if !status.is_success() {
         let body = response.text().unwrap_or_default();
-        return Err(format!("Could not read Gmail profile ({status}): {body}"));
+        return Err(format!("无法读取 Gmail 账户资料（{status}）：{body}"));
     }
 
     response
         .json::<GmailProfileResponse>()
-        .map_err(|error| format!("Could not parse Gmail profile: {error}"))
+        .map_err(|error| format!("无法解析 Gmail 账户资料：{error}"))
 }
 
 fn header_value(headers: &[GmailHeader], name: &str) -> String {
@@ -442,17 +442,17 @@ fn fetch_thread(client: &Client, access_token: &str, thread_id: &str, account_em
             ("metadataHeaders", "Date"),
         ])
         .send()
-        .map_err(|error| format!("Could not read Gmail thread {thread_id}: {error}"))?;
+        .map_err(|error| format!("无法读取 Gmail 邮件线程 {thread_id}：{error}"))?;
     let status = response.status();
 
     if !status.is_success() {
         let body = response.text().unwrap_or_default();
-        return Err(format!("Could not read Gmail thread {thread_id} ({status}): {body}"));
+        return Err(format!("无法读取 Gmail 邮件线程 {thread_id}（{status}）：{body}"));
     }
 
     let thread = response
         .json::<GmailThreadResponse>()
-        .map_err(|error| format!("Could not parse Gmail thread {thread_id}: {error}"))?;
+        .map_err(|error| format!("无法解析 Gmail 邮件线程 {thread_id}：{error}"))?;
     let message = thread.messages.as_ref().and_then(|messages| messages.last());
     let headers = message
         .and_then(|message| message.payload.as_ref())
@@ -504,17 +504,17 @@ pub async fn gmail_connect() -> Result<GmailConnectionStatus, String> {
     tauri::async_runtime::spawn_blocking(|| {
         let config = oauth_config()?;
         let listener = TcpListener::bind(("127.0.0.1", 0))
-            .map_err(|error| format!("Could not start local OAuth callback: {error}"))?;
+            .map_err(|error| format!("无法启动本地 OAuth 回调：{error}"))?;
         let port = listener
             .local_addr()
-            .map_err(|error| format!("Could not read local OAuth callback port: {error}"))?
+            .map_err(|error| format!("无法读取本地 OAuth 回调端口：{error}"))?
             .port();
         let redirect_uri = format!("http://127.0.0.1:{port}/oauth/gmail/callback");
         let verifier = random_urlsafe_bytes(48);
         let challenge = pkce_challenge(&verifier);
         let state = random_urlsafe_bytes(24);
         let mut auth_url = Url::parse(GOOGLE_AUTH_URL)
-            .map_err(|error| format!("Could not build Google OAuth URL: {error}"))?;
+            .map_err(|error| format!("无法生成 Google OAuth URL：{error}"))?;
 
         auth_url.query_pairs_mut()
             .append_pair("access_type", "offline")
@@ -529,13 +529,13 @@ pub async fn gmail_connect() -> Result<GmailConnectionStatus, String> {
             .append_pair("state", &state);
 
         open::that(auth_url.as_str())
-            .map_err(|error| format!("Could not open Google sign-in in the browser: {error}"))?;
+            .map_err(|error| format!("无法在浏览器中打开 Google 登录：{error}"))?;
 
         let code = listen_for_oauth_callback(listener, state)?;
         let client = Client::builder()
             .timeout(Duration::from_secs(30))
             .build()
-            .map_err(|error| format!("Could not create Gmail HTTP client: {error}"))?;
+            .map_err(|error| format!("无法创建 Gmail HTTP 客户端：{error}"))?;
         let token_response = exchange_code_for_token(
             &client,
             &config,
@@ -544,7 +544,7 @@ pub async fn gmail_connect() -> Result<GmailConnectionStatus, String> {
             &verifier,
         )?;
         let refresh_token = token_response.refresh_token.ok_or_else(|| {
-            "Google did not return a refresh token. Disconnect Gmail in your Google Account permissions and try again.".to_string()
+            "Google 没有返回刷新令牌。请在 Google 账户权限中断开 Gmail 后重试。".to_string()
         })?;
         let profile = fetch_profile(&client, &token_response.access_token)?;
         let stored = StoredGmailToken {
@@ -560,7 +560,7 @@ pub async fn gmail_connect() -> Result<GmailConnectionStatus, String> {
         status_from_token(Some(stored))
     })
     .await
-    .map_err(|error| format!("Gmail sign-in task failed: {error}"))?
+    .map_err(|error| format!("Gmail 登录任务失败：{error}"))?
 }
 
 #[tauri::command]
@@ -575,7 +575,7 @@ pub async fn gmail_fetch_unread(limit: Option<u8>) -> Result<GmailSuggestionsRes
         let client = Client::builder()
             .timeout(Duration::from_secs(30))
             .build()
-            .map_err(|error| format!("Could not create Gmail HTTP client: {error}"))?;
+            .map_err(|error| format!("无法创建 Gmail HTTP 客户端：{error}"))?;
         let token = ensure_access_token(&client)?;
         let max_results = limit.unwrap_or(8).clamp(1, 20).to_string();
         let response = client
@@ -586,17 +586,17 @@ pub async fn gmail_fetch_unread(limit: Option<u8>) -> Result<GmailSuggestionsRes
                 ("maxResults", max_results.as_str()),
             ])
             .send()
-            .map_err(|error| format!("Could not fetch unread Gmail threads: {error}"))?;
+            .map_err(|error| format!("无法获取未读 Gmail 邮件：{error}"))?;
         let status = response.status();
 
         if !status.is_success() {
             let body = response.text().unwrap_or_default();
-            return Err(format!("Could not fetch unread Gmail threads ({status}): {body}"));
+            return Err(format!("无法获取未读 Gmail 邮件（{status}）：{body}"));
         }
 
         let list = response
             .json::<GmailThreadListResponse>()
-            .map_err(|error| format!("Could not parse unread Gmail threads: {error}"))?;
+            .map_err(|error| format!("无法解析未读 Gmail 邮件：{error}"))?;
         let mut suggestions = Vec::new();
 
         for thread in list.threads.unwrap_or_default() {
@@ -618,5 +618,5 @@ pub async fn gmail_fetch_unread(limit: Option<u8>) -> Result<GmailSuggestionsRes
         })
     })
     .await
-    .map_err(|error| format!("Gmail sync task failed: {error}"))?
+    .map_err(|error| format!("Gmail 同步任务失败：{error}"))?
 }

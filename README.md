@@ -1,12 +1,13 @@
-# Todobar
+# 每日计划 Todobar
 
-[![CI](https://github.com/Leonxlnx/todobar/actions/workflows/ci.yml/badge.svg)](https://github.com/Leonxlnx/todobar/actions/workflows/ci.yml)
-[![Release](https://github.com/Leonxlnx/todobar/actions/workflows/release.yml/badge.svg)](https://github.com/Leonxlnx/todobar/actions/workflows/release.yml)
+[![CI](https://github.com/kobong1965/daily-plan-todobar/actions/workflows/ci.yml/badge.svg)](https://github.com/kobong1965/daily-plan-todobar/actions/workflows/ci.yml)
+[![Release](https://github.com/kobong1965/daily-plan-todobar/actions/workflows/release.yml/badge.svg)](https://github.com/kobong1965/daily-plan-todobar/actions/workflows/release.yml)
 
-Todobar is a native dockable todo sidebar for macOS and Windows, with an Android
-companion APK now building from the same product direction. It stays out of the
-way as a small edge handle, opens into a clean task panel, and is built for fast
-capture while you work in other apps.
+每日计划 Todobar 是一个适用于 Windows 和 macOS 的贴边任务栏。它平时收起为
+屏幕边缘的小角，需要记录任务时展开侧栏，不占用完整桌面窗口。
+
+这个仓库是 `kobong1965` 的公开版本，界面已调整为中文，并加入了按颜色分类、
+长期任务、双行任务标题和中文字体等日常使用功能。
 
 The app is early, but the foundation is real: Tauri v2, React, local persisted
 tasks, reminders, custom in-app reminder toasts, global shortcuts, autostart,
@@ -41,7 +42,9 @@ Most todo apps are full windows. Todobar is designed as a desktop utility:
   task and event actions
 - Custom task lists
 - Pin custom lists onto Today as goal groups
-- Add, edit, complete, prioritize, collapse, and delete tasks
+- Add, edit, complete, collapse, and delete tasks
+- Classify and sort tasks by color: red, gold, purple, blue, and white
+- Keep long-term tasks in a separate section that does not reset with Today
 - Rename and delete custom lists
 - Add reminder times while capturing tasks
 - Quick reminder cycling on existing tasks
@@ -128,7 +131,7 @@ The detailed plan lives in [Product vision](docs/product-vision.md) and
 ## Install
 
 Download the latest Windows, macOS, or Android build from
-[GitHub Releases](https://github.com/Leonxlnx/todobar/releases).
+[GitHub Releases](https://github.com/kobong1965/daily-plan-todobar/releases).
 
 Current stable release: `v0.1.14`.
 

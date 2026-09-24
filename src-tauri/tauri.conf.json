@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Todobar",
+  "productName": "每日计划",
   "version": "0.1.14",
   "identifier": "dev.todobar.desktop",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Todobar",
+        "title": "每日计划",
         "width": 442,
         "height": 84,
         "resizable": false,

@@ -464,7 +464,6 @@
   color: #7f858f;
 }
 
-.workspace.theme-dark .priority-button,
 .workspace.theme-dark .slider-setting em {
   color: #96a6bc;
 }
@@ -740,7 +739,7 @@ button {
 .quick-add button,
 .check-button,
 .edit-button,
-.priority-button,
+.color-button,
 .reminder-button,
 .delete-button,
 .custom-list-pin,
@@ -772,7 +771,7 @@ button {
 .quick-add button:hover,
 .check-button:hover,
 .edit-button:hover,
-.priority-button:hover,
+.color-button:hover,
 .reminder-button:hover,
 .delete-button:hover,
 .custom-list-pin:hover,
@@ -790,7 +789,7 @@ button {
 .workspace.theme-dark .quick-add button:hover,
 .workspace.theme-dark .check-button:hover,
 .workspace.theme-dark .edit-button:hover,
-.workspace.theme-dark .priority-button:hover,
+.workspace.theme-dark .color-button:hover,
 .workspace.theme-dark .reminder-button:hover,
 .workspace.theme-dark .delete-button:hover,
 .workspace.theme-dark .custom-list-pin:hover,
@@ -808,8 +807,8 @@ button {
 .quick-add button:focus-visible,
 .check-button:focus-visible,
 .edit-button:focus-visible,
+.color-button:focus-visible,
 .edge-handle:focus-visible,
-.priority-button:focus-visible,
 .reminder-button:focus-visible,
 .delete-button:focus-visible,
 .custom-list-title:focus-visible,
@@ -826,8 +825,8 @@ button {
 .workspace.theme-dark .quick-add button:focus-visible,
 .workspace.theme-dark .check-button:focus-visible,
 .workspace.theme-dark .edit-button:focus-visible,
+.workspace.theme-dark .color-button:focus-visible,
 .workspace.theme-dark .edge-handle:focus-visible,
-.workspace.theme-dark .priority-button:focus-visible,
 .workspace.theme-dark .reminder-button:focus-visible,
 .workspace.theme-dark .delete-button:focus-visible,
 .workspace.theme-dark .custom-list-title:focus-visible,
@@ -1687,7 +1686,14 @@ kbd {
   display: grid;
   border-left: 0;
   border-radius: var(--panel-radius) 0 0 var(--panel-radius);
-  background: transparent;
+  /*
+   * The Tauri window is transparent so the closed edge tab can float over the
+   * desktop. The open panel must paint its own opaque surface, otherwise a
+   * compositor/window switch can reveal the app behind it through the whole
+   * task list. Keep transparency limited to the area outside this panel.
+   */
+  background: var(--sidebar-solid-bg);
+  background-color: var(--sidebar-solid-bg);
   box-shadow: none;
   backdrop-filter: none;
   transform: none;
@@ -2050,7 +2056,7 @@ kbd {
   position: relative;
   min-height: 40px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: var(--space-2);
   padding: 4px 5px 4px 12px;
@@ -2098,6 +2104,90 @@ kbd {
 
 .quick-add input:focus-visible {
   outline: 0;
+}
+
+.quick-add.no-reminder {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+
+.color-toggle,
+.color-button {
+  position: relative;
+}
+
+.color-toggle {
+  inline-size: 26px !important;
+  block-size: 26px !important;
+  flex-basis: 26px !important;
+  border-radius: 9px !important;
+}
+
+.task-color-swatch {
+  display: inline-block;
+  inline-size: 8px;
+  block-size: 8px;
+  flex: 0 0 8px;
+  border-radius: 999px;
+  background: var(--task-color, #3b82f6);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--task-color, #3b82f6) 14%, transparent);
+}
+
+.quick-add-color-popover,
+.task-color-popover {
+  position: absolute;
+  z-index: 240;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--task-bg);
+  box-shadow: 0 12px 28px rgba(19, 25, 35, 0.16);
+  animation: reminder-popover-in 150ms var(--ease-out);
+}
+
+.quick-add-color-popover {
+  top: calc(100% + 7px);
+  right: 42px;
+}
+
+.task-color-popover {
+  top: calc(100% - 2px);
+  right: 42px;
+}
+
+.task-color-palette {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  min-width: 154px;
+  padding: 4px;
+}
+
+.task-color-choice {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 6px;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.task-color-palette .task-color-choice {
+  inline-size: auto;
+  block-size: 28px;
+  flex: 1 1 auto;
+}
+
+.task-color-choice:hover,
+.task-color-choice.is-selected {
+  color: var(--ink);
+  border-color: var(--line);
+  background: var(--surface-hover);
 }
 
 .quick-add.is-reminder-open {
@@ -4692,6 +4782,25 @@ kbd {
   padding-top: 2px;
 }
 
+.long-term-section {
+  padding-top: 4px;
+}
+
+.long-term-section .section-heading {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.long-term-section .section-content-inner {
+  display: grid;
+  gap: 8px;
+}
+
+.long-term-task-list {
+  display: grid;
+  gap: 5px;
+}
+
 .pinned-list-stack {
   display: grid;
   gap: 0;
@@ -4803,7 +4912,14 @@ kbd {
 }
 
 .task-row {
-  min-height: var(--task-row-height);
+  --task-color: #ffffff;
+  --task-fill: rgba(255, 255, 255, 0.86);
+  --task-hover-fill: rgba(255, 255, 255, 1);
+  --task-border-color: rgba(24, 26, 32, 0.12);
+  /* Reserve enough room for a two-line title even when the compact row
+     setting is still enabled. Longer titles continue to grow naturally so no
+     text is hidden behind an ellipsis. */
+  min-height: max(var(--task-row-height), calc(var(--task-title-size) * 2.5 + 14px));
   position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -4811,10 +4927,9 @@ kbd {
   gap: 8px;
   overflow: visible;
   padding: 7px 7px 7px 8px;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  border-radius: 0;
-  background: transparent;
+  border: 1px solid var(--task-border-color);
+  border-radius: var(--task-radius);
+  background: var(--task-fill);
   box-shadow: var(--row-shadow);
   transition:
     border-color 160ms ease,
@@ -4824,14 +4939,14 @@ kbd {
 }
 
 .task-row:last-child {
-  border-bottom: 0;
+  border-bottom: 1px solid var(--task-border-color);
 }
 
 .task-row::before {
   content: '';
   position: absolute;
-  inset: 9px auto 9px 0;
-  width: 2px;
+  inset: 0;
+  width: auto;
   border-radius: 999px;
   background: transparent;
   opacity: 0;
@@ -4840,14 +4955,79 @@ kbd {
     opacity 200ms ease;
 }
 
-.task-row.priority-focus::before {
-  background: var(--accent);
-  opacity: 1;
+.task-row.task-color-blue {
+  --task-color: #3b82f6;
+  --task-fill: color-mix(in srgb, var(--task-color) 13%, var(--task-bg));
+  --task-hover-fill: color-mix(in srgb, var(--task-color) 20%, var(--task-bg));
+  --task-border-color: color-mix(in srgb, var(--task-color) 32%, var(--line));
+}
+
+.task-row.task-color-red {
+  --task-color: #d83b56;
+  --task-fill: color-mix(in srgb, var(--task-color) 15%, var(--task-bg));
+  --task-hover-fill: color-mix(in srgb, var(--task-color) 23%, var(--task-bg));
+  --task-border-color: color-mix(in srgb, var(--task-color) 38%, var(--line));
+}
+
+.task-row.task-color-gold {
+  --task-color: #c58a18;
+  --task-fill: color-mix(in srgb, var(--task-color) 18%, var(--task-bg));
+  --task-hover-fill: color-mix(in srgb, var(--task-color) 27%, var(--task-bg));
+  --task-border-color: color-mix(in srgb, var(--task-color) 42%, var(--line));
+}
+
+.task-row.task-color-purple {
+  --task-color: #7c4dcc;
+  --task-fill: color-mix(in srgb, var(--task-color) 14%, var(--task-bg));
+  --task-hover-fill: color-mix(in srgb, var(--task-color) 23%, var(--task-bg));
+  --task-border-color: color-mix(in srgb, var(--task-color) 38%, var(--line));
+}
+
+.task-row.task-color-white {
+  --task-color: #ffffff;
+  --task-fill: color-mix(in srgb, #ffffff 88%, var(--task-bg));
+  --task-hover-fill: color-mix(in srgb, #ffffff 96%, var(--surface-hover));
+  --task-border-color: color-mix(in srgb, var(--ink) 14%, var(--line));
+}
+
+.task-row[class*='task-color-'] .color-button,
+.quick-add[class*='task-color-'] .color-toggle {
+  --task-color: #3b82f6;
+}
+
+.color-button.task-color-blue,
+.color-toggle.task-color-blue {
+  --task-color: #3b82f6;
+}
+
+.color-button.task-color-red,
+.color-toggle.task-color-red {
+  --task-color: #d83b56;
+}
+
+.color-button.task-color-gold,
+.color-toggle.task-color-gold {
+  --task-color: #c58a18;
+}
+
+.color-button.task-color-purple,
+.color-toggle.task-color-purple {
+  --task-color: #7c4dcc;
+}
+
+.color-button.task-color-white,
+.color-toggle.task-color-white {
+  --task-color: #ffffff;
+}
+
+.task-row[class*='task-color-']::before {
+  display: none;
 }
 
 .task-row:hover {
   z-index: 6;
-  background: var(--row-hover-bg);
+  background: var(--task-hover-fill);
+  border-color: var(--task-border-color);
   box-shadow: none;
 }
 
@@ -4859,15 +5039,9 @@ kbd {
   z-index: 80;
 }
 
-.task-row:hover::before,
-.task-row:focus-within::before {
-  background: var(--accent);
-  opacity: 0.6;
-}
-
-.task-row.priority-focus:hover::before,
-.task-row.priority-focus:focus-within::before {
-  opacity: 1;
+.task-row:focus-within {
+  background: var(--task-hover-fill);
+  border-color: var(--task-border-color);
 }
 
 .workspace.theme-dark .task-row:hover {
@@ -4903,7 +5077,6 @@ kbd {
 
 .check-button svg,
 .edit-button svg,
-.priority-dot,
 .reminder-button svg,
 .delete-button svg {
   transition:
@@ -4914,7 +5087,7 @@ kbd {
 }
 
 .check-button:active,
-.priority-button:active,
+.color-button:active,
 .reminder-button:active,
 .delete-button:active,
 .quick-add button:active,
@@ -4926,17 +5099,20 @@ kbd {
 .task-body {
   min-width: 0;
   display: grid;
+  align-content: center;
   gap: 3px;
 }
 
 .task-body strong {
-  overflow: hidden;
+  display: block;
+  max-width: 100%;
   color: var(--ink);
   font-size: var(--task-title-size);
-  line-height: 1.25;
+  line-height: 1.28;
   font-weight: 680;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .task-body strong.is-done {
@@ -5004,14 +5180,14 @@ kbd {
   flex: 0 0 auto;
 }
 
-.priority-button {
+.edit-button {
   inline-size: 26px;
   block-size: 26px;
   flex-basis: 26px;
   border-radius: 9px;
 }
 
-.edit-button {
+.color-button {
   inline-size: 26px;
   block-size: 26px;
   flex-basis: 26px;
@@ -5230,24 +5406,8 @@ kbd {
   animation: reminder-popover-in 150ms var(--ease-out);
 }
 
-.priority-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: #9aa7b6;
-}
-
-.priority-focus .priority-dot {
-  background: var(--accent);
-  transform: scale(1.18);
-}
-
-.priority-later .priority-dot {
-  background: #9aa1aa;
-}
-
 .task-row.is-complete {
-  background: color-mix(in srgb, var(--muted) 6%, transparent);
+  background: color-mix(in srgb, var(--task-fill) 72%, var(--surface-hover));
 }
 
 .task-row.is-complete .task-body strong {

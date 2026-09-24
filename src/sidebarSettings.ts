@@ -5,7 +5,7 @@ const STORAGE_KEY = 'todobar.sidebar.settings.v27'
 
 export type DockEdge = 'right' | 'left' | 'top' | 'bottom'
 export type ThemeMode = 'light' | 'dark'
-export type TaskSortMode = 'priority' | 'newest' | 'oldest'
+export type TaskSortMode = 'color' | 'newest' | 'oldest'
 export type TabVisibility = 'always' | 'hover'
 export type ThemePreset =
   | 'codex'
@@ -67,7 +67,7 @@ export const defaultSidebarSettings: SidebarSettings = {
   showCompleted: true,
   launchAtLogin: true,
   notificationsEnabled: true,
-  taskSortMode: 'priority',
+  taskSortMode: 'color',
   theme: 'light',
   visualStyle: 'codex',
   sectionOrder: ['today', 'calendar', 'lists'],
@@ -118,7 +118,7 @@ function sanitizeSettings(value: Partial<SidebarSettings>): SidebarSettings {
   const taskSortMode =
     value.taskSortMode === 'newest' || value.taskSortMode === 'oldest'
       ? value.taskSortMode
-      : 'priority'
+      : 'color'
   const tabVisibility = value.tabVisibility === 'hover' ? 'hover' : 'always'
   const backdropImage =
     typeof value.backdropImage === 'string' &&
