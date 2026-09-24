@@ -2194,6 +2194,11 @@ kbd {
   z-index: 45;
 }
 
+.quick-add.is-color-open,
+.task-row.is-color-open {
+  z-index: 250;
+}
+
 .quick-add .reminder-toggle svg {
   transition:
     transform 200ms var(--ease-out),

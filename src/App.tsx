@@ -3355,7 +3355,7 @@ function QuickAdd({
         isReminderOpen ? 'is-reminder-open' : ''
       } ${
         hasReminder ? 'has-reminder' : ''
-      }`}
+      } ${isColorOpen ? 'is-color-open' : ''}`}
     >
       <Inbox size={16} />
       <input
@@ -4761,7 +4761,9 @@ const TaskRow = memo(function TaskRow({
     <article
       className={`task-row task-color-${taskColor} ${
         task.done ? 'is-complete' : ''
-      } ${togglePulse ? `is-pulse-${togglePulse}` : ''}`}
+      } ${togglePulse ? `is-pulse-${togglePulse}` : ''} ${
+        isColorOpen ? 'is-color-open' : ''
+      }`}
       style={{ '--row-delay': `${Math.min(index, 8) * 18}ms` } as CSSProperties}
     >
       <button
