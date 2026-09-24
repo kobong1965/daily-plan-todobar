@@ -11,7 +11,7 @@ test('中文任务栏、设置和长期任务可用', async ({ page }) => {
 
   await expect(page).toHaveTitle(/todobar/i)
   await expect(page.getByText('每日计划').first()).toBeVisible()
-  await expect(page.getByText('今天', { exact: true }).first()).toBeVisible()
+  await expect(page.locator('#today-heading')).toBeVisible()
   await expect(page.locator('.task-row')).not.toHaveCount(0)
   await expect(page.getByLabel('添加任务')).toBeVisible()
 
