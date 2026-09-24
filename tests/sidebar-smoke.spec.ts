@@ -13,7 +13,9 @@ test('中文任务栏、设置和长期任务可用', async ({ page }) => {
   await expect(page.getByText('每日计划').first()).toBeVisible()
   await expect(page.locator('#today-heading')).toBeVisible()
   await expect(page.locator('.task-row')).not.toHaveCount(0)
-  await expect(page.getByLabel('添加任务')).toBeVisible()
+  await expect(
+    page.locator('#today-section').getByLabel('添加任务', { exact: true }),
+  ).toBeVisible()
 
   const taskTitles = page.locator('.task-row .task-body strong')
   await expect(taskTitles.first()).toHaveCSS('white-space', 'normal')
