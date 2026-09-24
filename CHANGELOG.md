@@ -1,5 +1,14 @@
 # Changelog
+## 0.1.15 - Public Windows Portable Release
 
+### Added
+
+- Published the Chinese daily plan build to the public `kobong1965/daily-plan-todobar` repository.
+- Added a Windows x64 portable release archive for use on another computer.
+
+### Fixed
+
+- Raised open color menus above task rows so the red, gold, purple, blue, and white choices remain clickable.
 ## 0.1.14 - Closed Tab Shadow Fix
 
 ### Fixed
