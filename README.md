@@ -1,0 +1,375 @@
+# 每日计划 Todobar
+
+[![CI](https://github.com/kobong1965/daily-plan-todobar/actions/workflows/ci.yml/badge.svg)](https://github.com/kobong1965/daily-plan-todobar/actions/workflows/ci.yml)
+[![Release](https://github.com/kobong1965/daily-plan-todobar/actions/workflows/release.yml/badge.svg)](https://github.com/kobong1965/daily-plan-todobar/actions/workflows/release.yml)
+
+每日计划 Todobar 是一个适用于 Windows 和 macOS 的贴边任务栏。它平时收起为
+屏幕边缘的小角，需要记录任务时展开侧栏，不占用完整桌面窗口。
+
+这个仓库是 `kobong1965` 的公开版本，界面已调整为中文，并加入了按颜色分类、
+长期任务、双行任务标题和中文字体等日常使用功能。
+
+The app is early, but the foundation is real: Tauri v2, React, local persisted
+tasks, reminders, custom in-app reminder toasts, global shortcuts, autostart,
+single-instance behavior, and release automation for Windows, macOS, and
+Android.
+
+## Why
+
+Most todo apps are full windows. Todobar is designed as a desktop utility:
+
+- always reachable from the edge of the screen
+- fast enough for one-line capture
+- clean enough to leave visible during focused work
+- local-first by default
+- ready for future AI and MCP integrations without making AI mandatory
+
+## Current Features
+
+- Dockable native sidebar for Windows and macOS
+- Right, left, and wider top dock placement modes
+- Small draggable handle that opens and closes the panel
+- Global shortcut: `Alt + T`, with `Alt + Shift + T` as a fallback
+- Native tray/menu-bar control for open, settings, and quit
+- Autostart on system login
+- Single-instance desktop behavior
+- Always-on-top frameless window
+- Click-through transparent area outside the handle and open panel
+- Compact icon command rail for Today, Calendar, Lists, and setup
+- Planning status strip with today's progress, open task count, and list count
+- Today tasks
+- Real calendar view with month navigation, selected-day capture, and scheduled
+  task and event actions
+- Custom task lists
+- Pin custom lists onto Today as goal groups
+- Add, edit, complete, collapse, and delete tasks
+- Classify and sort tasks by color: red, gold, purple, blue, and white
+- Keep long-term tasks in a separate section that does not reset with Today
+- Rename and delete custom lists
+- Add reminder times while capturing tasks
+- Quick reminder cycling on existing tasks
+- Clean icon rail for Today, Calendar, Lists, and Settings
+- Custom Todobar reminder toasts that appear inside the overlay instead of the
+  operating system notification tray
+- 10-minute snooze from reminder toasts
+- Optional completed-task visibility
+- Local persistence through browser storage
+- Light and dark modes with matching mode-specific theme presets
+- Custom theme dropdown with five matching light presets and five matching dark
+  presets
+- Optional custom backdrop image with strength, dim, and blur controls
+- Custom backdrop images also texture the visible edge tab/native dock surface
+- Optional hover-only visible tab mode for a quieter desktop edge
+- Theme-matched custom scrollbars in the sidebar and settings surfaces
+- Rearrange Today, Calendar, and Lists from settings
+- Collapse settings groups while tuning the sidebar, with the open/closed state
+  remembered locally
+- Gmail read-only connector foundation is implemented in code but hidden from
+  the product UI until Google OAuth verification and a public rollout plan are
+  ready.
+- Adjustable panel width, visible tab size, handle height, edge position,
+  motion speed, corner radius, task sort mode, task row height, task spacing,
+  task text size, completed-task visibility, launch-at-login, notifications,
+  and surface opacity
+- Responsive sizing for different monitor heights and widths
+- Native Android companion with a floating edge bubble, Today, Calendar, Lists,
+  Settings, local tasks, reminders, and matching English product language
+
+## Platform Status
+
+| Platform | Status | Notes |
+| --- | --- | --- |
+| Windows | Working | Built locally and in GitHub Actions. Release includes `.exe` and `.msi`. |
+| macOS Apple Silicon | Built in CI | Release includes `.dmg`. Unsigned until Apple signing is configured. |
+| macOS Intel | Built in CI | Release includes `.dmg`. Unsigned until Apple signing is configured. |
+| Android | Companion APK | Release includes an installable `.apk`. Overlay permission is required for the floating bubble. |
+
+## Verification Status
+
+The current `main` branch is checked by GitHub Actions on Windows and macOS.
+The release process publishes platform artifacts only after those workflows pass.
+
+What is verified:
+
+- TypeScript and Vite production build
+- ESLint
+- Project consistency checks for versions, docs links, scripts, and workflows
+- Playwright sidebar smoke test
+- Responsive sidebar layout checks for desktop, narrow, and short viewports
+- Rust check
+- Tauri no-bundle native build smoke test
+- Android release APK build
+
+What is not fully verified yet:
+
+- Physical macOS QA on real hardware
+- Windows certificate signing and Apple notarization
+- Signed auto-update
+- Full keyboard/accessibility pass
+
+## Roadmap
+
+Todobar is planned in product layers:
+
+- Version 0: dockable planner with local Today, Calendar, custom lists,
+  launch-at-login, global shortcut, tray/menu-bar control, and responsive native
+  shell.
+- Version 1: better planner with editable tasks, undo, reminders,
+  notifications, recurring tasks, keyboard-first triage, SQLite storage, and
+  import/export.
+- Version 2: assistant layer with AI suggestions, task splitting, Today
+  planning, source/confidence display, approval flow, and audit log.
+- Version 3: MCP/context connectors for local files, GitHub, Gmail, calendar,
+  Notion/docs, and issue trackers.
+- Companion manager: a larger settings/planning window for connectors,
+  notification rules, provider setup, bulk editing, backups, and assistant
+  history.
+
+The detailed plan lives in [Product vision](docs/product-vision.md) and
+[Roadmap](docs/roadmap.md).
+
+## Install
+
+Download the latest Windows, macOS, or Android build from
+[GitHub Releases](https://github.com/kobong1965/daily-plan-todobar/releases).
+
+Current stable release: `v0.1.14`.
+
+Windows:
+
+- Prefer `Todobar_<version>_x64-setup.exe` for a normal installer.
+- Use `Todobar_<version>_x64_en-US.msi` for MSI-based install flows.
+
+macOS:
+
+- Use `Todobar_<version>_aarch64.dmg` on Apple Silicon Macs.
+- Use `Todobar_<version>_x64.dmg` on Intel Macs.
+
+macOS builds from public CI are currently unsigned until code signing and
+notarization certificates are configured. You may need to right-click the app and
+choose Open.
+
+Android:
+
+- Use `todobar-android-v<version>.apk`.
+- Android will ask for overlay permission so the floating sidebar bubble can
+  appear above other apps.
+- The Android app is a native companion and is being aligned with the desktop
+  experience over time.
+
+## Usage
+
+- Click the edge handle to open or close Todobar.
+- Drag the handle along its docked edge to change its position.
+- Press `Alt + T` to toggle it from any app.
+- If that shortcut is already owned by another app, use `Alt + Shift + T`.
+- Use the tray/menu-bar icon to toggle Todobar, open settings, or quit.
+- Press `Esc` to close the panel.
+- Use the command rail to jump between Today, Calendar, Lists, and setup
+  without turning the sidebar into a full dashboard.
+- Use the settings button to adjust appearance, dock edge, desktop startup,
+  window size, handle shape, task density, sorting, backdrop image, motion,
+  radius, and opacity.
+## Gmail Integration Status
+
+Gmail is implemented as a production-minded foundation, not as a frontend
+placeholder, but it is currently hidden from the normal Todobar UI:
+
+- Primary path: direct Gmail API OAuth, not MCP.
+- Scope: `https://www.googleapis.com/auth/gmail.readonly`.
+- Current reads: recent unread Inbox threads only.
+- Current actions: convert a selected suggestion into a local Todobar task,
+  open the original Gmail thread, or ignore the suggestion locally.
+- Not implemented: sending email, composing drafts, deleting email, archiving,
+  labeling, or mutating Gmail in any way.
+- Token storage: native OS credential store only. Windows uses Credential
+  Manager. macOS uses Keychain. OAuth tokens are never stored in frontend
+  `localStorage`.
+- Browser preview uses mock connector state for tests and design QA only.
+
+Normal users should not need a Google Cloud project. Maintainers of public
+builds still need to configure and verify the Google OAuth client before
+publishing a Gmail-enabled release. Until then, Gmail remains an internal
+foundation rather than a visible product feature.
+
+## Data and Privacy
+
+Todobar is local-first in this prototype. Task data and settings are stored in
+local browser storage inside the app webview. Gmail-derived tasks stay local in
+the same task store. There is no analytics layer and no general network sync.
+
+When Gmail is connected, Todobar uses the Gmail API only for the read-only
+connector features listed above. Every Gmail read performed by the UI is shown in
+the connector activity area. Disconnecting Gmail removes the stored OAuth token
+from the native OS credential store.
+
+Future AI and MCP features should stay optional, permissioned, and visible. The
+core task app must remain useful without AI.
+
+## Development
+
+Requirements:
+
+- Node.js LTS
+- Rust stable
+- Platform prerequisites for Tauri v2
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run the web preview:
+
+```bash
+npm run dev
+```
+
+Run the native desktop app:
+
+```bash
+npm run tauri:dev
+```
+
+For local Gmail OAuth testing, provide a Google OAuth desktop client ID to the
+native process:
+
+```bash
+$env:TODOBAR_GMAIL_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+npm run tauri:dev
+```
+
+If your OAuth client requires a secret, keep it in the native environment only:
+
+```bash
+$env:TODOBAR_GMAIL_CLIENT_SECRET="your-client-secret"
+```
+
+Do not put OAuth secrets in React code, static assets, or browser storage.
+
+Build the app locally:
+
+```bash
+npm run tauri:build
+```
+
+Validate the project:
+
+```bash
+npm run verify
+npm run build
+npm run lint
+npm run test:smoke
+npm run test:native
+cargo check --manifest-path src-tauri/Cargo.toml
+```
+
+Build the Android APK locally:
+
+```powershell
+cd android
+.\gradlew.bat assembleRelease
+```
+
+`npm run test:smoke` runs a browser smoke test against the Vite preview. If
+Chromium is missing locally, run `npx playwright install chromium` once.
+
+`npm run test:native` runs a no-bundle Tauri release build. It validates the
+native desktop shell without creating installers.
+
+## Release Builds
+
+The repository includes GitHub Actions workflows:
+
+- `ci.yml` checks TypeScript, linting, browser smoke tests, Rust, and no-bundle
+  native Tauri builds on Windows and macOS.
+- `release.yml` builds release artifacts for:
+  - Windows
+  - macOS Apple Silicon
+  - macOS Intel
+- `android.yml` builds an Android release APK and attaches it to version
+  releases.
+
+Create a release by pushing a version tag:
+
+```bash
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+Before tagging, bump the version in `package.json`, `package-lock.json`,
+`src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `src-tauri/tauri.conf.json`, and
+`android/app/build.gradle.kts`.
+
+The Tauri release workflow uploads the platform installers to GitHub Releases.
+
+Current release workflow output:
+
+- Windows setup `.exe`
+- Windows `.msi`
+- macOS Apple Silicon `.dmg`
+- macOS Intel `.dmg`
+- macOS `.app.tar.gz` archives
+- Android `.apk`
+
+## Architecture
+
+Todobar uses:
+
+- React + TypeScript for the UI
+- Tauri v2 for native desktop APIs
+- `@tauri-apps/plugin-global-shortcut` for the open/close shortcut
+- `@tauri-apps/plugin-autostart` for launch-at-login
+- Tauri tray/menu-bar APIs for desktop control while the window is skipped from
+  the taskbar
+- `tauri-plugin-single-instance` to prevent duplicate sidebars
+- local browser storage for the current prototype task store
+
+Native window behavior is intentionally kept in a small layer:
+
+- the Tauri window is positioned per dock edge
+- the visible tab remains docked to the chosen screen edge
+- transparent regions pass clicks through to the app behind Todobar
+- panel width is clamped so it still fits on narrow monitors
+
+The long-term architecture keeps native integrations behind adapters so the UI
+can stay portable while desktop capabilities remain explicit and permissioned.
+
+## Open Source
+
+Todobar is licensed under the Apache License 2.0.
+
+Roadmap and release follow-ups are kept in the docs so the public issue tracker
+stays focused on real user reports:
+
+- physical macOS QA
+- Windows signing and macOS notarization
+- signed auto-update channel
+- keyboard and accessibility hardening
+
+Contributions are welcome, especially around:
+
+- Windows and macOS edge-window behavior
+- accessibility and keyboard-first task flows
+- local-first data storage
+- release signing and auto-update
+- MCP connector design
+- AI planning UX with strong privacy boundaries
+
+## Documentation
+
+Planning and research notes live in [`docs/`](docs/).
+
+Useful starting points:
+
+- [Architecture](docs/architecture.md)
+- [Gmail integration](docs/gmail-integration.md)
+- [Product vision](docs/product-vision.md)
+- [UI direction](docs/ui-direction.md)
+- [Platform support](docs/platform-support.md)
+- [Release verification](docs/release-verification-v0.1.14.md)
+- [Roadmap](docs/roadmap.md)
+- [Native test matrix](docs/native-test-matrix.md)
+- [Security model](docs/security-model.md)
+- [Open source plan](docs/open-source-plan.md)
