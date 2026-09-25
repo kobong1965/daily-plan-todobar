@@ -1,0 +1,454 @@
+# Changelog
+## 0.1.16 - Daily Reset and Long-Term Progress
+
+### Added
+
+- Added automatic daily task reset at the local calendar day boundary.
+- Added editable completion percentages and progress bars for long-term tasks.
+- Added a persistent double-width view for the long-term task section.
+
+### Fixed
+
+- Daily tasks now clear when the app is reopened on a new day or remains open across midnight; long-term tasks remain unchanged.## 0.1.15 - Public Windows Portable Release
+
+### Added
+
+- Published the Chinese daily plan build to the public `kobong1965/daily-plan-todobar` repository.
+- Added a Windows x64 portable release archive for use on another computer.
+
+### Fixed
+
+- Raised open color menus above task rows so the red, gold, purple, blue, and white choices remain clickable.
+## 0.1.14 - Closed Tab Shadow Fix
+
+### Fixed
+
+- Fixed a faint gray stripe that appeared above and below the closed edge
+  tab on the user's wallpaper. The native dock surface kept the full 24-28
+  px ambient drop-shadow even when only the small tab was visible, so the
+  shadow bled vertically beyond the tab. The closed state now drops the
+  filter entirely; the ambient shadow returns the instant the panel opens.
+
+## 0.1.13 - Premium UI Polish
+
+### Added
+
+- Added a shared motion, spacing, and radius design-token layer so every
+  component now pulls easing curves, gaps, and corner radii from one place.
+- Added a persistent left accent bar on focus-priority task rows so high-priority
+  items are scannable without hover.
+- Added an accent rail indicator that slides in beside the active sidebar
+  section button as a clear "you are here" cue.
+- Added a sticky settings drawer header with backdrop blur so the title and
+  back action stay visible while scrolling long settings groups.
+- Added micro-interactions: bell tilt when a reminder is queued, calendar event
+  dots that grow on hover, and a check pop on task completion.
+- Added prefers-reduced-motion guards so the section enter and per-row stagger
+  animations are skipped for users who opt out.
+- Added @media (hover: none) handling so row actions stay visible, reminder
+  presets grow to 40 dp, and rail/calendar hit targets reach 38-44 dp on touch.
+
+### Changed
+
+- Polished the edge handle with a theme-aware border, layered drop shadow, and
+  a dedicated dark-mode tone so it grounds against any palette without halo.
+- Quieted shared icon button rest states across the rail, headers, capture row,
+  and task rows: transparent at rest, soft surface tint on hover.
+- Replaced the task row check button with a round outline that fills with the
+  accent on hover and completion, matching modern task-app conventions.
+- Removed card-in-card layouts: custom list titles became flat hover rows and
+  pinned task lists no longer wrap their rows in a second bordered card.
+- Reskinned the dock-edge picker, task-sort picker, and calendar entry-mode
+  toggle as proper segmented controls with a single shared track.
+- Modernized the settings toggle to fill with the active accent instead of
+  going near-black or washed-blue depending on theme.
+- Tuned settings sliders to use the active accent for the thumb with an
+  accent-tinted halo that visually grounds in the surrounding row.
+- Tightened section switch staggers from 158 ms to 128 ms and removed the
+  rotation that was causing subpixel shimmer on horizontal text.
+- Promoted the Apply settings button and destructive confirmation buttons to
+  real primary actions (accent or red pills) so commits and deletes are
+  unmistakable.
+- Polished the calendar board, day cells, weekday header, today button, and
+  agenda card into a coherent month view with tabular numerals throughout.
+- Replaced the hard-coded red reminder badge on the edge handle with the
+  active theme accent so the notification chip belongs to the current palette.
+- Made the app icon tile theme-aware so it picks up the active accent instead
+  of always reading as a dark chip.
+- Auto-hid custom scrollbars unless the surrounding container is hovered so
+  the side rail stays clean at rest.
+- Refined every popover (reminder, delete confirm, theme dropdown, settings
+  confirm) to a calmer two-layer shadow that adapts to dark mode.
+- Aligned the section-heading counter, day-summary chips, and pinned list
+  titles on consistent typography (-0.5% letter-spacing, tabular-nums).
+- Mirrored the desktop polish on Android: thinner bubble handle stroke and
+  card borders, pill-shaped primary buttons, flat task row backgrounds, and a
+  matching ink-color sentence-case heading for settings sections.
+
+### Fixed
+
+- Stopped task row actions from translating on hover (no more 1 px shift).
+- Stopped theme dropdown hover from matching the selected state so the current
+  theme stays identifiable as the cursor moves through the menu.
+- Stopped section group titles from rendering as tiny 9 px UPPERCASE muted
+  text - they are now proper 11.5 px sentence-case ink-color headings.
+- Stopped the calendar nav arrows from reading as inert because they no longer
+  rely solely on the global icon-button hover.
+
+## 0.1.12 - Desktop Motion Polish
+
+### Added
+
+- Added direction-aware, staggered transitions when switching between Today,
+  Calendar, and Lists.
+- Added smoke coverage that checks the rendered section transition animation
+  hooks.
+
+### Changed
+
+- Made Windows and macOS desktop navigation feel smoother by animating the new
+  section shell, primary blocks, and task rows as one coordinated transition.
+
+## 0.1.11 - Android Companion
+
+### Added
+
+- Added a native Android companion APK to the release path.
+- Added Android documentation for local release builds and overlay permission.
+- Added Android release verification coverage alongside the desktop artifacts.
+
+### Changed
+
+- Aligned the Android companion version with the desktop app version.
+- Made the Android floating handle use the full configured visible tab width,
+  including better side and top dock sizing.
+- Matched Android task metadata to the desktop language for Today and custom
+  list capture.
+
+### Fixed
+
+- Fixed Android overlay service running-state reporting so the launcher screen
+  reflects the actual floating sidebar service.
+- Fixed Android open and close animation direction for right, left, and top
+  dock placement.
+- Fixed Android handle dragging so side docks move vertically and the top dock
+  moves horizontally.
+- Fixed Android reminder snooze routing so calendar and custom-list reminders
+  update the correct task instead of always targeting Today.
+
+## 0.1.10 - Quality Pass
+
+### Added
+
+- Added two extra curated theme presets so light and dark modes each expose six
+  choices.
+- Added a calm Today empty state for filtered or completed lists.
+- Added a smoke assertion for the closed native dock state.
+
+### Changed
+
+- Simplified panel-width apply feedback so it stays neutral instead of turning
+  into a bright blue Done state.
+- Made task completion feedback local to the check button to avoid full-row
+  flashes when reopening a task.
+- Cleaned up pinned list separators and dark-mode task action button contrast.
+- Calmed dark-mode scrollbars and sidebar rail button states.
+- Neutralized the custom backdrop tint on the visible tab.
+- Separated closed native dock stroke styling from the open panel shape.
+- Made the edge picker visually directional.
+- Softened quick-add focus treatment.
+- Tightened calendar reminder controls and labels.
+- Added icons to settings groups and removed duplicate theme mode copy.
+- Expanded the visible tab size range.
+- Lifted the custom theme dropdown above settings controls.
+- Reduced native cursor passthrough latency.
+
+## 0.1.9 - Hidden Gmail Foundation
+
+### Added
+
+- Added the first real Gmail integration foundation using direct Gmail API OAuth
+  instead of MCP as the primary user flow.
+- Added native Gmail OAuth loopback handling, PKCE, token exchange, refresh
+  handling, and OS credential storage through Windows Credential Manager and
+  macOS Keychain via the native layer.
+- Added a user-facing Gmail connector settings section with disconnected,
+  connected, reconnect, sync, disconnect, permission boundary, and activity
+  audit states.
+- Added Inbox suggestions for recent unread Gmail threads, with local convert
+  to Todobar task, Gmail thread links, and local ignore state.
+- Added browser smoke coverage for disconnected Gmail UI, connected mock state,
+  revoked-token/reconnect state, and converting a mocked Gmail thread into a
+  local task.
+
+### Changed
+
+- Moved Gmail MCP/developer setup out of the normal user flow. MCP remains a
+  future advanced path, while direct Gmail OAuth is now the primary connector
+  path.
+- Hid the Gmail connector UI behind an internal feature flag until OAuth
+  verification and public rollout are ready. The implementation remains in the
+  codebase for future activation.
+
+## 0.1.8 - Native Dock Polish
+
+### Added
+
+- Added collapsible settings groups to keep the settings drawer easier to scan.
+- Added a non-connected Gmail MCP connector surface that documents the
+  permission boundary without reading email data.
+- Added Calendar entry mode controls so selected-day capture can create tasks
+  or events.
+- Added a hover-only visible tab setting for users who want the edge handle to
+  stay hidden until the screen edge is hovered.
+- Added persistent settings group collapse state.
+- Added custom backdrop texture support to the visible edge tab/native dock
+  surface, not just the open sidebar.
+
+### Changed
+
+- Refined task list row radii so hover and completed states keep rounded
+  corners in Today, Calendar, Lists, and pinned list sections.
+- Restored a lightweight border around pinned task groups without bringing back
+  card-in-card list containers.
+- Made hover-only tab mode use a narrow invisible edge reveal zone so the full
+  hidden button area can stay click-through until the cursor reaches the screen
+  edge.
+- Tuned dark-mode settings scrollbars and the Calendar Today button to match
+  the active theme more cleanly.
+- Reduced native hover/click-through hit-test polling frequency to lower idle
+  CPU use while keeping the edge reveal responsive.
+- Made native edge hover detection faster while keeping the idle polling slower.
+- Reduced native dock shadow weight so the tab column does not leave a heavy
+  dark strip beside the panel.
+- Toned down custom backdrop imagery inside the native dock/tab surface so the
+  open button stays visually attached to the sidebar instead of picking up a
+  strong blue image cast.
+- Let the native SVG dock surface own the sidebar material instead of covering
+  it with a rectangular sidebar background, so the tab connection reads as one
+  continuous shape.
+- Added a dimmed custom backdrop treatment to the settings drawer.
+- Increased spacing between pinned Today list groups so dividers do not sit too
+  close to the previous task row.
+- Made task completion and reopening feel smoother without replaying the row
+  entrance animation.
+- Flattened pinned list and custom list sections to avoid card-in-card layouts.
+- Reduced heavy dark-mode gradients, rail icon bevels, and settings control
+  contrast.
+- Reworked the themed scrollbar styling for the sidebar, settings, and theme
+  picker surfaces.
+- Reworked panel-width Apply feedback to stay pale instead of switching to a
+  bright blue Done state.
+- Added pointer-based section reordering in settings so Today, Calendar, and
+  Lists can be dragged more reliably.
+- Clarified the Surface opacity setting and the Gmail MCP permission boundary.
+- Made Surface opacity visibly affect the settings drawer/native panel instead
+  of only subtly changing the main task panel.
+- Prefilled Gmail MCP setup with Google's Workspace MCP endpoint and an OAuth
+  client ID field for the future native auth runner.
+
+### Fixed
+
+- Fixed hover-only tab reveal in the native desktop shell so right, left, and
+  top docks expose the invisible edge trigger inside the visible tab strip.
+- Fixed hover-only native reveal so moving the mouse anywhere along the screen
+  edge reveals the button instead of requiring the button itself to be hovered.
+- Removed the experimental panel-edge resize handle after it proved too easy to
+  trigger accidentally and visually too noisy for the dock edge.
+
+## 0.1.7 - Performance and Personalization
+
+### Added
+
+- Added task sorting controls so lists can stay priority-first, newest-first,
+  or oldest-first without changing the stored tasks.
+- Added custom backdrop image support with strength, dim, and blur controls for
+  users who want a more personal desktop overlay.
+- Added a 10-minute snooze action to custom reminder toasts.
+
+### Changed
+
+- Debounced local task, custom-list, and settings persistence so normal typing
+  and slider movement do less synchronous storage work.
+- Indexed calendar reminder counts once per render instead of filtering all
+  tasks for every visible calendar day.
+- Reworked the staged panel-width setting so Apply no longer gets squeezed next
+  to the range control.
+
+### Fixed
+
+- Fixed light-mode reminder toast colors so in-app alerts follow the active
+  theme instead of looking like a dark OS notification.
+
+## 0.1.6 - Sidebar Polish and Reminder Badges
+
+### Added
+
+- Added a redesigned sidebar shell with a right-side command rail and compact
+  planning status strip.
+- Added a custom mode-aware theme dropdown with five light presets and five dark
+  presets.
+- Added reminder capture controls, quick reminder cycling on task rows, and
+  custom Todobar reminder toasts that avoid OS notification chrome.
+- Added section ordering controls so Today, Calendar, and Lists can be
+  rearranged from settings.
+- Added real Calendar navigation with selected-day capture and task actions.
+- Added right, left, and wider top dock placement modes.
+- Added pinned custom lists on Today for goal groups.
+- Added inline task editing and custom list renaming.
+
+### Changed
+
+- Removed the browser tab-restore shortcut chord as a default. `Alt + T` is now
+  the primary toggle shortcut, with `Alt + Shift + T` as a fallback.
+- Removed the translucent Lumen/Smoke preset and kept the picker focused on
+  solid, readable light and dark themes.
+- Widened the top dock layout and expanded handle size controls.
+- Added confirmation UI for reset, task delete, and custom-list delete while
+  preserving Shift-click as the immediate delete path.
+- Reworked task sections from stacked cards into calmer command rows with
+  subtler action chrome and no hover lift.
+- Increased the default sidebar width for a less cramped open-source first-run
+  experience while keeping panel width configurable.
+- Made task and quick-add hover states calmer so controls no longer float upward
+  during normal pointer movement.
+- Memoized task rows and added lightweight rendering containment for long task
+  lists.
+- Simplified the sidebar rail into icon-only controls to avoid clipped labels
+  and keep the panel calmer.
+- Replaced handle top/middle/bottom presets with clearer screen-edge docking
+  controls for right, left, and top placement.
+- Replaced the top stats strip with a single quiet Today progress bar.
+- Reworked settings sizing so panel width is staged with an Apply action instead
+  of resizing the window while the slider moves.
+- Combined window and handle controls into a tighter settings group and ordered
+  Screen Edge controls as Left, Right, then Top.
+- Refined task, calendar, settings, and list buttons with square hit targets,
+  soft-ui bevels, pressed states, and task action tooltips.
+- Removed the duplicate per-section Today meter so the sidebar has one progress
+  bar at the top.
+- Added drag-and-drop section ordering while keeping the small arrow controls as
+  an accessible fallback.
+- Moved reminder alerts to a bottom toast position and added a red handle badge
+  for due reminders when the sidebar is closed.
+
+### Fixed
+
+- Fixed clipped quick reminder controls by letting the reminder editor expand in
+  flow instead of rendering outside its section.
+- Fixed reminder date focus styling so it no longer shows a harsh blue ring that
+  appears cut off.
+- Fixed native monitor targeting by resolving the monitor under the cursor before
+  falling back to the current window monitor.
+- Fixed reminder alerts opening the full sidebar automatically when they become
+  due.
+- Fixed task action tooltips and delete confirmations being trapped under task
+  row layers.
+- Fixed startup monitor targeting in the native shell by using the cursor monitor
+  before falling back to the current window monitor.
+
+### Verified
+
+- Local Windows checks cover project verification, linting, production build,
+  Playwright smoke tests, and the no-bundle native Tauri build.
+- Release automation publishes Windows, macOS Apple Silicon, and macOS Intel
+  artifacts from the `v0.1.6` tag.
+
+## 0.1.5 - Native Shortcut Fix
+
+### Fixed
+
+- Moved the toggle shortcut registration from the focused React webview into the
+  native Tauri layer, so the global toggle can open Todobar from another app
+  without clicking the sidebar first.
+
+### Added
+
+- Added `Alt + Shift + T` as a global toggle fallback.
+- Extended project verification so native shortcut registration remains covered.
+
+### Verified
+
+- `v0.1.5` artifacts were published for Windows, macOS Apple Silicon, and
+  macOS Intel, with release digests recorded in the verification notes.
+
+## 0.1.4 - Desktop Control and Product Vision
+
+### Added
+
+- Native tray/menu-bar control for opening Todobar, opening settings, and
+  quitting the app while the sidebar stays out of the taskbar.
+- Product vision documentation covering Version 0, planner upgrades,
+  notifications, AI assistant direction, MCP/Gmail/context connectors, and the
+  future companion manager surface.
+
+### Verified
+
+- `v0.1.4` artifacts were published for Windows, macOS Apple Silicon, and
+  macOS Intel, with release digests recorded in the verification notes.
+
+## 0.1.3 - Responsive Edge Polish
+
+### Fixed
+
+- Fixed a 2px handle clipping issue in narrow open-sidebar browser preview
+  layouts.
+
+### Added
+
+- Responsive Playwright checks for desktop, narrow, and short viewports.
+- Release verification documentation for the responsive edge-polish release.
+
+### Verified
+
+- Browser smoke tests now cover the task flow plus responsive sidebar bounds.
+- `v0.1.3` artifacts were published for Windows, macOS Apple Silicon, and
+  macOS Intel, with release digests recorded in the verification notes.
+
+## 0.1.2 - Reliability and Open Source Polish
+
+### Added
+
+- Completed-task visibility setting so finished tasks can be hidden without
+  deleting them.
+- Playwright smoke test for the sidebar, settings drawer, and completed-task
+  visibility flow.
+- No-bundle native Tauri build smoke test for Windows and macOS CI.
+- Release verification documentation for the stable release.
+
+### Changed
+
+- Updated GitHub Actions workflow dependencies.
+- Made install instructions version-agnostic to avoid stale release filenames.
+- Linked release gaps to public GitHub Issues.
+- Expanded project verification to guard scripts, docs links, release versions,
+  and workflow expectations.
+
+### Verified
+
+- CI runs project verification, TypeScript/Vite build, ESLint, Playwright smoke
+  tests, Rust check, and native Tauri build smoke on Windows and macOS.
+- `v0.1.2` release artifacts were published for Windows, macOS Apple Silicon,
+  and macOS Intel.
+
+## 0.1.1
+
+- Added launch-at-login control in settings.
+- Added task row height, row gap, and text size customization.
+- Improved narrow viewport task action spacing.
+- Clarified Windows and macOS installation docs.
+- Added platform support documentation.
+- Added GitHub issue and pull request templates.
+
+## 0.1.0
+
+- Added native right-edge sidebar shell.
+- Added draggable open/close handle.
+- Added global shortcut support.
+- Added autostart on login.
+- Added single-instance desktop behavior.
+- Added Today, Month Plan, and custom lists.
+- Added add, complete, priority, collapse, and delete actions.
+- Added light and dark themes.
+- Added local persistence for prototype task data.
+- Added Windows and macOS release workflows.
