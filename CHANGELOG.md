@@ -1,5 +1,15 @@
 # Changelog
-## 0.1.15 - Public Windows Portable Release
+## 0.1.16 - Daily Reset and Long-Term Progress
+
+### Added
+
+- Added automatic daily task reset at the local calendar day boundary.
+- Added editable completion percentages and progress bars for long-term tasks.
+- Added a persistent double-width view for the long-term task section.
+
+### Fixed
+
+- Daily tasks now clear when the app is reopened on a new day or remains open across midnight; long-term tasks remain unchanged.## 0.1.15 - Public Windows Portable Release
 
 ### Added
 
