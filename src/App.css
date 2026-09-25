@@ -3932,6 +3932,37 @@ kbd {
   border-radius: var(--radius-sm);
 }
 
+.long-term-width-toggle {
+  inline-size: auto !important;
+  min-inline-size: 64px;
+  block-size: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 760;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--control-bg);
+  cursor: pointer;
+}
+
+.long-term-width-toggle:hover,
+.long-term-width-toggle.is-selected {
+  color: var(--accent-strong);
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.long-term-width-toggle span {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
 .section-heading span {
   gap: 8px;
   color: var(--ink);
@@ -4791,6 +4822,14 @@ kbd {
   padding-top: 4px;
 }
 
+.view-stack.long-term-wide #today-section {
+  width: var(--section-base-width);
+}
+
+.view-stack.long-term-wide .long-term-section {
+  width: var(--long-term-section-width);
+}
+
 .long-term-section .section-heading {
   padding-top: 12px;
   border-top: 1px solid var(--line);
@@ -4804,6 +4843,55 @@ kbd {
 .long-term-task-list {
   display: grid;
   gap: 5px;
+}
+
+.task-progress-control {
+  display: grid;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.task-progress-control label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.task-progress-control input {
+  inline-size: 44px;
+  block-size: 23px;
+  padding: 0 5px;
+  color: var(--ink);
+  font: 760 11px / 1 var(--font);
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  outline: 0;
+  background: var(--control-bg);
+}
+
+.task-progress-control input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-soft) 72%, transparent);
+}
+
+.task-progress-track {
+  inline-size: min(100%, 210px);
+  block-size: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 72%, transparent);
+}
+
+.task-progress-track span {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 180ms var(--ease-out);
 }
 
 .pinned-list-stack {
@@ -5135,6 +5223,35 @@ kbd {
   line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.task-body .task-progress-control {
+  display: grid;
+  overflow: visible;
+  white-space: normal;
+}
+
+.task-body .task-progress-control label {
+  display: inline-flex;
+  overflow: visible;
+  white-space: normal;
+}
+
+.task-body .task-progress-control label span,
+.task-body .task-progress-track span {
+  display: inline;
+  overflow: visible;
+  white-space: normal;
+}
+
+.task-body .task-progress-track {
+  display: block;
+  overflow: hidden;
+  white-space: normal;
+}
+
+.task-body .task-progress-track span {
+  display: block;
 }
 
 .task-reminder {

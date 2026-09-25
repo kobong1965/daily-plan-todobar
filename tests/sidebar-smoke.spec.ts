@@ -46,6 +46,67 @@ test('中文任务栏、设置和长期任务可用', async ({ page }) => {
   await redChoice.click()
 })
 
+test('跨日清空每日任务并保留长期任务', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      'todobar.today.v1',
+      JSON.stringify({
+        dateKey: '2000-01-01',
+        tasks: [
+          {
+            id: 9001,
+            title: '已经过期的每日任务',
+            meta: '今天',
+            color: 'red',
+          },
+        ],
+      }),
+    )
+    window.localStorage.setItem(
+      'todobar.long-term.v1',
+      JSON.stringify([
+        {
+          id: 9002,
+          title: '需要长期保留的任务',
+          meta: '长期 · 持续推进',
+          color: 'purple',
+        },
+      ]),
+    )
+  })
+  await page.goto('/?open=1')
+
+  await expect(
+    page.locator('#today-section').getByText('已经过期的每日任务', { exact: true }),
+  ).toHaveCount(0)
+  await expect(
+    page.locator('.long-term-section').getByText('需要长期保留的任务', {
+      exact: true,
+    }),
+  ).toBeVisible()
+  await expect(page.locator('#today-section .empty-task-list')).toBeVisible()
+})
+
+test('长期任务支持进度和双倍宽版', async ({ page }) => {
+  await page.goto('/?open=1')
+
+  const longTermSection = page.locator('.long-term-section')
+  const progressInput = longTermSection.getByLabel(/长期任务.*进度/).first()
+  await expect(progressInput).toBeVisible()
+  await progressInput.fill('65')
+  await expect(progressInput).toHaveValue('65')
+
+  const todayWidth = await page.locator('#today-section').evaluate(
+    (element) => element.getBoundingClientRect().width,
+  )
+  await longTermSection.getByRole('button', { name: '长期任务双倍宽' }).click()
+  await expect(page.locator('.view-stack')).toHaveClass(/long-term-wide/)
+  const wideLongTermWidth = await longTermSection.evaluate(
+    (element) => element.getBoundingClientRect().width,
+  )
+  expect(wideLongTermWidth).toBeGreaterThanOrEqual(todayWidth * 1.9)
+})
+
 for (const viewport of viewports) {
   test(`任务栏布局保持在${viewport.name}视口内`, async ({ page }) => {
     await page.setViewportSize({

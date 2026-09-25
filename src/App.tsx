@@ -16,6 +16,7 @@ import {
   Inbox,
   ListTodo,
   Mail,
+  Maximize2,
   Moon,
   Minus,
   Palette,
@@ -275,6 +276,12 @@ function colorForTask(task: Task): TaskColor {
   }
 
   return 'blue'
+}
+
+function progressForTask(task: Task) {
+  const progress = typeof task.progress === 'number' ? task.progress : 0
+
+  return Math.min(100, Math.max(0, Math.round(progress)))
 }
 
 function sortTasks(tasks: Task[], sortMode: TaskSortMode = 'color') {
@@ -639,6 +646,10 @@ function getDockPanelWidth(
   )
 }
 
+function getLayoutPanelWidth(panelWidth: number, longTermWide: boolean) {
+  return longTermWide ? Math.min(panelWidth * 2, 960) : panelWidth
+}
+
 function loadCustomLists() {
   try {
     const stored = window.localStorage.getItem(CUSTOM_LISTS_STORAGE_KEY)
@@ -737,6 +748,7 @@ function App() {
   const [todayTasks, setTodayTasks] = usePersistentTasks(
     initialToday,
     TASK_STORAGE_KEYS.today,
+    { resetOnDateChange: true },
   )
   const [monthTasks, setMonthTasks] = usePersistentTasks(
     monthPlan,
@@ -962,12 +974,13 @@ function App() {
   const effectivePanelWidth = useMemo(() => {
     return getDockPanelWidth(
       settings.dockEdge,
-      settings.panelWidth,
+      getLayoutPanelWidth(settings.panelWidth, settings.longTermWide),
       settings.tabWidth,
       viewportWidth,
     )
   }, [
     settings.dockEdge,
+    settings.longTermWide,
     settings.panelWidth,
     settings.tabWidth,
     viewportWidth,
@@ -1410,7 +1423,7 @@ function App() {
           settings.dockEdge === 'top' || settings.dockEdge === 'bottom'
         const panelCssWidth = getDockPanelWidth(
           settings.dockEdge,
-          settings.panelWidth,
+          getLayoutPanelWidth(settings.panelWidth, settings.longTermWide),
           settings.tabWidth,
           fullCssWidth,
         )
@@ -1537,6 +1550,7 @@ function App() {
     isNative,
     isOpen,
     settings.dockEdge,
+    settings.longTermWide,
     settings.motionMs,
     settings.panelWidth,
     settings.tabWidth,
@@ -1727,6 +1741,7 @@ function App() {
     isOpen,
     nativeHandleCenter,
     settings.dockEdge,
+    settings.longTermWide,
     settings.handleHeight,
     settings.tabWidth,
     settings.tabVisibility,
@@ -1873,6 +1888,16 @@ function App() {
   const setLongTermTaskColor = (id: number, color: TaskColor) => {
     setLongTermTasks((tasks) =>
       tasks.map((task) => (task.id === id ? { ...task, color } : task)),
+    )
+  }
+
+  const setLongTermTaskProgress = (id: number, progress: number) => {
+    const nextProgress = Math.min(100, Math.max(0, Math.round(progress)))
+
+    setLongTermTasks((tasks) =>
+      tasks.map((task) =>
+        task.id === id ? { ...task, progress: nextProgress } : task,
+      ),
     )
   }
 
@@ -2345,6 +2370,18 @@ function App() {
 
   const appStyle = {
     '--panel-width': `${effectivePanelWidth}px`,
+    '--panel-base-width': `${Math.min(
+      settings.panelWidth,
+      viewportWidth,
+    )}px`,
+    '--section-base-width': `${Math.max(
+      240,
+      Math.min(settings.panelWidth, viewportWidth) - 46,
+    )}px`,
+    '--long-term-section-width': `${Math.min(
+      Math.max(240, Math.min(settings.panelWidth, viewportWidth) - 46) * 2,
+      Math.max(240, effectivePanelWidth - 46),
+    )}px`,
     '--panel-half': `${effectivePanelWidth / 2}px`,
     '--panel-depth': `${effectivePanelDepth}px`,
     '--tab-width': `${settings.tabWidth}px`,
@@ -2544,7 +2581,7 @@ function App() {
             </section>
 
             <div
-              className="view-stack"
+              className={`view-stack ${settings.longTermWide ? 'long-term-wide' : ''}`}
               data-motion={sectionMotion}
               data-view={activeRailSection}
               key={activeRailSection}
@@ -2714,6 +2751,21 @@ function App() {
                         <em>{longTermTasks.length} 项常驻</em>
                       </span>
                     </div>
+                    <button
+                      type="button"
+                      className={`long-term-width-toggle ${
+                        settings.longTermWide ? 'is-selected' : ''
+                      }`}
+                      aria-label="长期任务双倍宽"
+                      aria-pressed={settings.longTermWide}
+                      title={settings.longTermWide ? '恢复标准宽度' : '展开为双倍宽度'}
+                      onClick={() =>
+                        updateSettings({ longTermWide: !settings.longTermWide })
+                      }
+                    >
+                      <Maximize2 size={14} />
+                      <span>宽版</span>
+                    </button>
                   </div>
                   <div className="section-content-inner">
                     <QuickAdd
@@ -2741,8 +2793,10 @@ function App() {
                             task={task}
                             index={index}
                             showReminder={false}
+                            showProgress
                             onToggle={toggleLongTermTask}
                             onColor={setLongTermTaskColor}
+                            onProgress={setLongTermTaskProgress}
                             onDelete={deleteLongTermTask}
                             onRename={renameLongTermTask}
                           />
@@ -4678,8 +4732,10 @@ const TaskRow = memo(function TaskRow({
   task,
   index = 0,
   showReminder = true,
+  showProgress = false,
   onToggle,
   onColor,
+  onProgress,
   onReminder,
   onDelete,
   onRename,
@@ -4687,8 +4743,10 @@ const TaskRow = memo(function TaskRow({
   task: Task
   index?: number
   showReminder?: boolean
+  showProgress?: boolean
   onToggle?: (id: number) => void
   onColor?: (id: number, color: TaskColor) => void
+  onProgress?: (id: number, progress: number) => void
   onReminder?: (id: number) => void
   onDelete?: (id: number) => void
   onRename?: (id: number, title: string) => void
@@ -4701,6 +4759,7 @@ const TaskRow = memo(function TaskRow({
   const pulseTimeout = useRef<number | null>(null)
   const reminderLabel = formatReminder(task.reminderAt)
   const taskColor = colorForTask(task)
+  const taskProgress = progressForTask(task)
   const visibleMeta = task.meta
     .split('·')
     .map((part) => part.trim())
@@ -4820,6 +4879,35 @@ const TaskRow = memo(function TaskRow({
               </a>
             ) : null}
           </span>
+        ) : null}
+        {showProgress ? (
+          <div className="task-progress-control">
+            <label>
+              <span>进度</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                inputMode="numeric"
+                aria-label={`长期任务${task.title}进度`}
+                value={taskProgress}
+                onChange={(event) =>
+                  onProgress?.(task.id, Number(event.target.value))
+                }
+              />
+              <span>%</span>
+            </label>
+            <div
+              className="task-progress-track"
+              role="progressbar"
+              aria-label={`${task.title}完成进度`}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={taskProgress}
+            >
+              <span style={{ width: `${taskProgress}%` }} />
+            </div>
+          </div>
         ) : null}
       </div>
       <div className="row-actions">

@@ -41,6 +41,7 @@ export type SidebarSettings = {
   launchAtLogin: boolean
   notificationsEnabled: boolean
   taskSortMode: TaskSortMode
+  longTermWide: boolean
   theme: ThemeMode
   visualStyle: ThemePreset
   sectionOrder: SectionId[]
@@ -68,6 +69,7 @@ export const defaultSidebarSettings: SidebarSettings = {
   launchAtLogin: true,
   notificationsEnabled: true,
   taskSortMode: 'color',
+  longTermWide: false,
   theme: 'light',
   visualStyle: 'codex',
   sectionOrder: ['today', 'calendar', 'lists'],
@@ -174,6 +176,7 @@ function sanitizeSettings(value: Partial<SidebarSettings>): SidebarSettings {
       value.notificationsEnabled ??
       defaultSidebarSettings.notificationsEnabled,
     taskSortMode,
+    longTermWide: Boolean(value.longTermWide),
     theme,
     visualStyle,
     sectionOrder: sanitizeSectionOrder(value.sectionOrder),

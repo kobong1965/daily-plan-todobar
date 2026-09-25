@@ -5,6 +5,8 @@ export type Task = {
   /** Kept only so tasks saved by older builds can still be read safely. */
   priority?: 'focus' | 'normal' | 'later'
   color?: TaskColor
+  /** Completion percentage used by long-term tasks. */
+  progress?: number
   kind?: 'task' | 'event'
   reminderAt?: string
   source?: {
