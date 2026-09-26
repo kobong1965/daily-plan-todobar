@@ -1,6 +1,6 @@
 [package]
 name = "todobar"
-version = "0.1.16"
+version = "0.1.17"
 description = "Right-edge todo sidebar for macOS and Windows"
 authors = ["Leonxlnx"]
 license = "Apache-2.0"
@@ -35,3 +35,4 @@ url = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-single-instance = "2"
+

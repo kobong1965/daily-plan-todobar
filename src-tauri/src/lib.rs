@@ -112,16 +112,24 @@ pub fn run() {
                 let _ = window.set_skip_taskbar(true);
                 let _ = window.set_background_color(Some(tauri::utils::config::Color(0, 0, 0, 0)));
 
+                // Prefer the monitor that owns the native window. Cursor based
+                // selection is unreliable at the seam between two monitors
+                // and can place a closed panel in the middle of the desktop.
                 let monitor = window
-                    .cursor_position()
+                    .current_monitor()
                     .ok()
-                    .and_then(|position| {
+                    .flatten()
+                    .or_else(|| {
                         window
-                            .monitor_from_point(position.x, position.y)
+                            .cursor_position()
                             .ok()
-                            .flatten()
-                    })
-                    .or_else(|| window.current_monitor().ok().flatten());
+                            .and_then(|position| {
+                                window
+                                    .monitor_from_point(position.x, position.y)
+                                    .ok()
+                                    .flatten()
+                            })
+                    });
 
                 if let Some(monitor) = monitor {
                     let monitor_size = monitor.size();

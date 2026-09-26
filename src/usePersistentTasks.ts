@@ -4,6 +4,7 @@ import { scheduleLocalStorageWrite } from './storage'
 
 type PersistentTasksOptions = {
   resetOnDateChange?: boolean
+  carryOverTask?: (task: Task) => Task | null
 }
 
 type DailyTaskStorage = {
@@ -19,11 +20,25 @@ function localDateKey(date = new Date()) {
   return `${year}-${month}-${day}`
 }
 
+function resetTasksForNewDate(
+  tasks: Task[],
+  carryOverTask?: (task: Task) => Task | null,
+) {
+  if (!carryOverTask) {
+    return []
+  }
+
+  return tasks
+    .map(carryOverTask)
+    .filter((task): task is Task => task !== null)
+}
+
 function readTasks(
   seedTasks: Task[],
   storageKey: string,
   resetOnDateChange: boolean,
   dateKey: string,
+  carryOverTask?: (task: Task) => Task | null,
 ) {
   try {
     const stored = window.localStorage.getItem(storageKey)
@@ -44,8 +59,12 @@ function readTasks(
       return parsed
     }
 
-    if (parsed.dateKey !== dateKey || !Array.isArray(parsed.tasks)) {
+    if (!Array.isArray(parsed.tasks)) {
       return []
+    }
+
+    if (parsed.dateKey !== dateKey) {
+      return resetTasksForNewDate(parsed.tasks, carryOverTask)
     }
 
     return parsed.tasks
@@ -60,6 +79,7 @@ export function usePersistentTasks(
   options: PersistentTasksOptions = {},
 ) {
   const resetOnDateChange = options.resetOnDateChange ?? false
+  const carryOverTask = options.carryOverTask
   const initialDateKey = localDateKey()
   const dateKeyRef = useRef(initialDateKey)
   const [dateKey, setDateKey] = useState(initialDateKey)
@@ -69,6 +89,7 @@ export function usePersistentTasks(
       storageKey,
       resetOnDateChange,
       initialDateKey,
+      carryOverTask,
     )
   })
 
@@ -86,7 +107,7 @@ export function usePersistentTasks(
 
       dateKeyRef.current = nextDateKey
       setDateKey(nextDateKey)
-      setTasks([])
+      setTasks((current) => resetTasksForNewDate(current, carryOverTask))
     }
 
     const timer = window.setInterval(checkForDateChange, 30_000)
@@ -98,7 +119,7 @@ export function usePersistentTasks(
       window.removeEventListener('focus', checkForDateChange)
       document.removeEventListener('visibilitychange', checkForDateChange)
     }
-  }, [resetOnDateChange])
+  }, [carryOverTask, resetOnDateChange])
 
   useEffect(() => {
     const value = resetOnDateChange

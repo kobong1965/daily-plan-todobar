@@ -278,12 +278,6 @@ function colorForTask(task: Task): TaskColor {
   return 'blue'
 }
 
-function progressForTask(task: Task) {
-  const progress = typeof task.progress === 'number' ? task.progress : 0
-
-  return Math.min(100, Math.max(0, Math.round(progress)))
-}
-
 function sortTasks(tasks: Task[], sortMode: TaskSortMode = 'color') {
   return [...tasks].sort((a, b) => {
     if (sortMode === 'newest') {
@@ -748,7 +742,11 @@ function App() {
   const [todayTasks, setTodayTasks] = usePersistentTasks(
     initialToday,
     TASK_STORAGE_KEYS.today,
-    { resetOnDateChange: true },
+    {
+      resetOnDateChange: true,
+      carryOverTask: (task) =>
+        colorForTask(task) === 'red' ? { ...task, done: false } : null,
+    },
   )
   const [monthTasks, setMonthTasks] = usePersistentTasks(
     monthPlan,
@@ -1399,17 +1397,20 @@ function App() {
           monitorFromPoint,
         } = await import('@tauri-apps/api/window')
         const appWindow = getCurrentWindow()
-        let monitor = null
+        // Keep the panel on the monitor that owns the native window. Using the
+        // cursor first is unstable with two monitors because the pointer can
+        // sit on the seam and make a closed panel jump toward the middle.
+        let monitor = await currentMonitor()
 
-        try {
-          const cursor = await cursorPosition()
+        if (!monitor) {
+          try {
+            const cursor = await cursorPosition()
 
-          monitor = await monitorFromPoint(cursor.x, cursor.y)
-        } catch {
-          monitor = null
+            monitor = await monitorFromPoint(cursor.x, cursor.y)
+          } catch {
+            monitor = null
+          }
         }
-
-        monitor ??= await currentMonitor()
 
         if (!monitor) {
           return
@@ -1594,13 +1595,16 @@ function App() {
           return
         }
 
-        const [cursor, position] = await Promise.all([
-          cursorPosition(),
+        const [position, cursor] = await Promise.all([
           appWindow.outerPosition(),
+          cursorPosition(),
         ])
-        let monitor = await monitorFromPoint(cursor.x, cursor.y)
+        let monitor = await currentMonitor()
 
-        monitor ??= await currentMonitor()
+        if (!monitor) {
+          const cursor = await cursorPosition()
+          monitor = await monitorFromPoint(cursor.x, cursor.y)
+        }
         const scaleFactor = monitor?.scaleFactor || 1
         const relativeX = cursor.x - position.x
         const relativeY = cursor.y - position.y
@@ -1891,12 +1895,10 @@ function App() {
     )
   }
 
-  const setLongTermTaskProgress = (id: number, progress: number) => {
-    const nextProgress = Math.min(100, Math.max(0, Math.round(progress)))
-
+  const setLongTermTaskNote = (id: number, note: string) => {
     setLongTermTasks((tasks) =>
       tasks.map((task) =>
-        task.id === id ? { ...task, progress: nextProgress } : task,
+        task.id === id ? { ...task, note } : task,
       ),
     )
   }
@@ -2793,10 +2795,10 @@ function App() {
                             task={task}
                             index={index}
                             showReminder={false}
-                            showProgress
+                            showNote
                             onToggle={toggleLongTermTask}
                             onColor={setLongTermTaskColor}
-                            onProgress={setLongTermTaskProgress}
+                            onNote={setLongTermTaskNote}
                             onDelete={deleteLongTermTask}
                             onRename={renameLongTermTask}
                           />
@@ -4732,10 +4734,10 @@ const TaskRow = memo(function TaskRow({
   task,
   index = 0,
   showReminder = true,
-  showProgress = false,
+  showNote = false,
   onToggle,
   onColor,
-  onProgress,
+  onNote,
   onReminder,
   onDelete,
   onRename,
@@ -4743,10 +4745,10 @@ const TaskRow = memo(function TaskRow({
   task: Task
   index?: number
   showReminder?: boolean
-  showProgress?: boolean
+  showNote?: boolean
   onToggle?: (id: number) => void
   onColor?: (id: number, color: TaskColor) => void
-  onProgress?: (id: number, progress: number) => void
+  onNote?: (id: number, note: string) => void
   onReminder?: (id: number) => void
   onDelete?: (id: number) => void
   onRename?: (id: number, title: string) => void
@@ -4759,7 +4761,6 @@ const TaskRow = memo(function TaskRow({
   const pulseTimeout = useRef<number | null>(null)
   const reminderLabel = formatReminder(task.reminderAt)
   const taskColor = colorForTask(task)
-  const taskProgress = progressForTask(task)
   const visibleMeta = task.meta
     .split('·')
     .map((part) => part.trim())
@@ -4880,34 +4881,17 @@ const TaskRow = memo(function TaskRow({
             ) : null}
           </span>
         ) : null}
-        {showProgress ? (
-          <div className="task-progress-control">
-            <label>
-              <span>进度</span>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                inputMode="numeric"
-                aria-label={`长期任务${task.title}进度`}
-                value={taskProgress}
-                onChange={(event) =>
-                  onProgress?.(task.id, Number(event.target.value))
-                }
-              />
-              <span>%</span>
-            </label>
-            <div
-              className="task-progress-track"
-              role="progressbar"
-              aria-label={`${task.title}完成进度`}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={taskProgress}
-            >
-              <span style={{ width: `${taskProgress}%` }} />
-            </div>
-          </div>
+        {showNote ? (
+          <label className="task-note-control">
+            <span>备注</span>
+            <textarea
+              rows={2}
+              aria-label={`长期任务${task.title}备注`}
+              placeholder="添加备注…"
+              value={task.note ?? ''}
+              onChange={(event) => onNote?.(task.id, event.target.value)}
+            />
+          </label>
         ) : null}
       </div>
       <div className="row-actions">

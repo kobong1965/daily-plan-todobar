@@ -16,6 +16,9 @@ test('中文任务栏、设置和长期任务可用', async ({ page }) => {
   await expect(
     page.locator('#today-section').getByLabel('添加任务', { exact: true }),
   ).toBeVisible()
+  await expect(
+    page.locator('.task-row.task-color-red .color-button .task-color-swatch').first(),
+  ).toHaveCSS('background-color', 'rgb(216, 59, 86)')
 
   const taskTitles = page.locator('.task-row .task-body strong')
   await expect(taskTitles.first()).toHaveCSS('white-space', 'normal')
@@ -43,10 +46,16 @@ test('中文任务栏、设置和长期任务可用', async ({ page }) => {
   await todayQuickAdd.getByLabel(/选择任务颜色/).click()
   const redChoice = page.getByRole('button', { name: '红色', exact: true })
   await expect(redChoice).toBeVisible()
+  await expect(redChoice.locator('.task-color-swatch')).toHaveCSS(
+    'background-color',
+    'rgb(216, 59, 86)',
+  )
+  await expect(page.locator('#today-section')).toHaveCSS('z-index', '20')
+  await expect(page.locator('.long-term-section')).toHaveCSS('z-index', '1')
   await redChoice.click()
 })
 
-test('跨日清空每日任务并保留长期任务', async ({ page }) => {
+test('跨日保留红色必做任务并重置为未完成', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem(
       'todobar.today.v1',
@@ -55,9 +64,16 @@ test('跨日清空每日任务并保留长期任务', async ({ page }) => {
         tasks: [
           {
             id: 9001,
-            title: '已经过期的每日任务',
+            title: '每日必做任务',
             meta: '今天',
             color: 'red',
+            done: true,
+          },
+          {
+            id: 9002,
+            title: '已经过期的普通任务',
+            meta: '今天',
+            color: 'blue',
           },
         ],
       }),
@@ -77,24 +93,30 @@ test('跨日清空每日任务并保留长期任务', async ({ page }) => {
   await page.goto('/?open=1')
 
   await expect(
-    page.locator('#today-section').getByText('已经过期的每日任务', { exact: true }),
+    page.locator('#today-section').getByText('每日必做任务', { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.locator('#today-section').getByText('已经过期的普通任务', { exact: true }),
   ).toHaveCount(0)
+  await expect(
+    page.locator('#today-section').getByRole('button', { name: '完成每日必做任务' }),
+  ).toBeVisible()
   await expect(
     page.locator('.long-term-section').getByText('需要长期保留的任务', {
       exact: true,
     }),
   ).toBeVisible()
-  await expect(page.locator('#today-section .empty-task-list')).toBeVisible()
 })
 
-test('长期任务支持进度和双倍宽版', async ({ page }) => {
+test('长期任务支持备注和双倍宽版', async ({ page }) => {
   await page.goto('/?open=1')
 
   const longTermSection = page.locator('.long-term-section')
-  const progressInput = longTermSection.getByLabel(/长期任务.*进度/).first()
-  await expect(progressInput).toBeVisible()
-  await progressInput.fill('65')
-  await expect(progressInput).toHaveValue('65')
+  const noteInput = longTermSection.getByLabel(/长期任务.*备注/).first()
+  await expect(noteInput).toBeVisible()
+  await noteInput.fill('每周复盘后更新这里')
+  await expect(noteInput).toHaveValue('每周复盘后更新这里')
+  await expect(longTermSection.getByLabel(/长期任务.*进度/)).toHaveCount(0)
 
   const todayWidth = await page.locator('#today-section').evaluate(
     (element) => element.getBoundingClientRect().width,

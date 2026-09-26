@@ -133,7 +133,7 @@ The detailed plan lives in [Product vision](docs/product-vision.md) and
 Download the latest Windows, macOS, or Android build from
 [GitHub Releases](https://github.com/kobong1965/daily-plan-todobar/releases).
 
-Current stable release: `v0.1.16`.
+Current stable release: `v0.1.17`.
 
 Windows:
 
@@ -373,3 +373,5 @@ Useful starting points:
 - [Native test matrix](docs/native-test-matrix.md)
 - [Security model](docs/security-model.md)
 - [Open source plan](docs/open-source-plan.md)
+
+

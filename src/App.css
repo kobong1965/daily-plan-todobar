@@ -1981,8 +1981,18 @@ kbd {
 
 .view-stack > .panel-section {
   min-width: 0;
+  position: relative;
+  z-index: 0;
   animation: view-section-in 280ms var(--ease-out-soft) both;
   will-change: opacity, transform;
+}
+
+/* Each animated section creates its own paint layer. Lift the section that
+   owns an open palette so it can paint above the following long-term panel. */
+.view-stack > .panel-section:has(.quick-add.is-color-open),
+.view-stack > .panel-section:has(.task-row.is-color-open),
+.view-stack > .panel-section:has(.quick-add.is-reminder-open) {
+  z-index: 20;
 }
 
 .view-stack .section-heading,
@@ -4822,6 +4832,10 @@ kbd {
   padding-top: 4px;
 }
 
+.view-stack > .long-term-section {
+  z-index: 1;
+}
+
 .view-stack.long-term-wide #today-section {
   width: var(--section-base-width);
 }
@@ -4845,53 +4859,42 @@ kbd {
   gap: 5px;
 }
 
-.task-progress-control {
+.task-note-control {
   display: grid;
   gap: 4px;
   margin-top: 5px;
 }
 
-.task-progress-control label {
+.task-note-control > span {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
   color: var(--muted);
   font-size: 10px;
   font-weight: 700;
 }
 
-.task-progress-control input {
-  inline-size: 44px;
-  block-size: 23px;
-  padding: 0 5px;
+.task-note-control textarea {
+  min-inline-size: 0;
+  inline-size: 100%;
+  min-block-size: 34px;
+  resize: vertical;
+  padding: 5px 7px;
   color: var(--ink);
-  font: 760 11px / 1 var(--font);
-  text-align: center;
+  font: 620 11px / 1.35 var(--font);
   border: 1px solid var(--line);
   border-radius: 7px;
   outline: 0;
   background: var(--control-bg);
 }
 
-.task-progress-control input:focus {
+.task-note-control textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.72;
+}
+
+.task-note-control textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-soft) 72%, transparent);
-}
-
-.task-progress-track {
-  inline-size: min(100%, 210px);
-  block-size: 4px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--line) 72%, transparent);
-}
-
-.task-progress-track span {
-  display: block;
-  block-size: 100%;
-  border-radius: inherit;
-  background: var(--accent);
-  transition: width 180ms var(--ease-out);
 }
 
 .pinned-list-stack {
@@ -5083,34 +5086,40 @@ kbd {
   --task-border-color: color-mix(in srgb, var(--ink) 14%, var(--line));
 }
 
-.task-row[class*='task-color-'] .color-button,
-.quick-add[class*='task-color-'] .color-toggle {
-  --task-color: #3b82f6;
-}
-
 .color-button.task-color-blue,
-.color-toggle.task-color-blue {
+.color-toggle.task-color-blue,
+.task-color-choice.task-color-blue {
   --task-color: #3b82f6;
 }
 
 .color-button.task-color-red,
-.color-toggle.task-color-red {
+.color-toggle.task-color-red,
+.task-color-choice.task-color-red {
   --task-color: #d83b56;
 }
 
 .color-button.task-color-gold,
-.color-toggle.task-color-gold {
+.color-toggle.task-color-gold,
+.task-color-choice.task-color-gold {
   --task-color: #c58a18;
 }
 
 .color-button.task-color-purple,
-.color-toggle.task-color-purple {
+.color-toggle.task-color-purple,
+.task-color-choice.task-color-purple {
   --task-color: #7c4dcc;
 }
 
 .color-button.task-color-white,
-.color-toggle.task-color-white {
+.color-toggle.task-color-white,
+.task-color-choice.task-color-white {
   --task-color: #ffffff;
+}
+
+.task-color-choice.task-color-white .task-color-swatch,
+.color-button.task-color-white .task-color-swatch,
+.color-toggle.task-color-white .task-color-swatch {
+  border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
 }
 
 .task-row[class*='task-color-']::before {
@@ -5225,33 +5234,22 @@ kbd {
   white-space: nowrap;
 }
 
-.task-body .task-progress-control {
+.task-body .task-note-control {
   display: grid;
   overflow: visible;
   white-space: normal;
 }
 
-.task-body .task-progress-control label {
+.task-body .task-note-control > span {
   display: inline-flex;
   overflow: visible;
   white-space: normal;
 }
 
-.task-body .task-progress-control label span,
-.task-body .task-progress-track span {
-  display: inline;
-  overflow: visible;
-  white-space: normal;
-}
-
-.task-body .task-progress-track {
+.task-body .task-note-control textarea {
   display: block;
-  overflow: hidden;
-  white-space: normal;
-}
-
-.task-body .task-progress-track span {
-  display: block;
+  overflow: auto;
+  white-space: pre-wrap;
 }
 
 .task-reminder {
