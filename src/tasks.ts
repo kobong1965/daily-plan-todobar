@@ -5,8 +5,10 @@ export type Task = {
   /** Kept only so tasks saved by older builds can still be read safely. */
   priority?: 'focus' | 'normal' | 'later'
   color?: TaskColor
-  /** Completion percentage used by long-term tasks. */
+  /** Legacy field retained so older saved tasks remain readable. */
   progress?: number
+  /** Optional note shown on long-term tasks. */
+  note?: string
   kind?: 'task' | 'event'
   reminderAt?: string
   source?: {

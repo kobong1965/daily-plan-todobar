@@ -1,3 +1,11 @@
+## 0.1.17 - Daily Must-Do and Long-Term Notes
+
+### Changed
+
+- Red daily tasks now carry across calendar days and reset only to unfinished.
+- Replaced long-term progress controls with editable notes.
+- Fixed per-color swatches, palette stacking, and two-monitor closed docking.
+
 # Changelog
 ## 0.1.16 - Daily Reset and Long-Term Progress
 
@@ -452,3 +460,4 @@
 - Added light and dark themes.
 - Added local persistence for prototype task data.
 - Added Windows and macOS release workflows.
+
