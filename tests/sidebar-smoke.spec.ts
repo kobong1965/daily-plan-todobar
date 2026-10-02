@@ -112,7 +112,24 @@ test('长期任务支持备注和双倍宽版', async ({ page }) => {
   await page.goto('/?open=1')
 
   const longTermSection = page.locator('.long-term-section')
-  const noteInput = longTermSection.getByLabel(/长期任务.*备注/).first()
+  const longTermRow = longTermSection.locator('.long-term-task-list .task-row').first()
+  await expect(longTermRow).toHaveCSS('background-image', /linear-gradient/)
+  await expect(
+    longTermRow.locator('.color-button .task-color-swatch'),
+  ).toHaveCSS('background-color', 'rgb(124, 77, 204)')
+  const todayTitleSize = await page.locator('#today-section .task-body strong').first().evaluate(
+    (element) => Number.parseFloat(getComputedStyle(element).fontSize),
+  )
+  const longTermTitleSize = await longTermRow.locator('.task-body strong').evaluate(
+    (element) => Number.parseFloat(getComputedStyle(element).fontSize),
+  )
+  expect(longTermTitleSize).toBeGreaterThanOrEqual(todayTitleSize * 1.49)
+
+  const noteButton = longTermRow.getByRole('button', { name: /添加备注|编辑备注/ })
+  await expect(noteButton).toBeVisible()
+  const noteInput = longTermRow.locator('.task-note-popover textarea')
+  await expect(noteInput).toHaveCount(0)
+  await noteButton.click()
   await expect(noteInput).toBeVisible()
   await noteInput.fill('每周复盘后更新这里')
   await expect(noteInput).toHaveValue('每周复盘后更新这里')

@@ -1,3 +1,8 @@
+## 0.1.18 - Long-Term Task Visuals
+
+- Give long-term tasks a vivid blue-purple gradient lane and 50% larger typography.
+- Replace the always-visible long-term note field with a compact book icon that opens an accessible note editor on demand.
+
 ## 0.1.17 - Daily Must-Do and Long-Term Notes
 
 ### Changed

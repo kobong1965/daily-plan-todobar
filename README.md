@@ -133,7 +133,7 @@ The detailed plan lives in [Product vision](docs/product-vision.md) and
 Download the latest Windows, macOS, or Android build from
 [GitHub Releases](https://github.com/kobong1965/daily-plan-todobar/releases).
 
-Current stable release: `v0.1.17`.
+Current stable release: `v0.1.18`.
 
 Windows:
 

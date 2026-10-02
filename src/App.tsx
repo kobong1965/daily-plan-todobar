@@ -3,6 +3,7 @@ import {
   ArrowUp,
   Bell,
   BellRing,
+  BookOpen,
   CalendarDays,
   Check,
   ChevronDown,
@@ -4755,6 +4756,7 @@ const TaskRow = memo(function TaskRow({
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [isColorOpen, setIsColorOpen] = useState(false)
+  const [isNoteOpen, setIsNoteOpen] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [togglePulse, setTogglePulse] = useState<'complete' | 'open' | null>(null)
   const [draft, setDraft] = useState(task.title)
@@ -4881,18 +4883,6 @@ const TaskRow = memo(function TaskRow({
             ) : null}
           </span>
         ) : null}
-        {showNote ? (
-          <label className="task-note-control">
-            <span>备注</span>
-            <textarea
-              rows={2}
-              aria-label={`长期任务${task.title}备注`}
-              placeholder="添加备注…"
-              value={task.note ?? ''}
-              onChange={(event) => onNote?.(task.id, event.target.value)}
-            />
-          </label>
-        ) : null}
       </div>
       <div className="row-actions">
         {onRename ? (
@@ -4909,6 +4899,27 @@ const TaskRow = memo(function TaskRow({
             <Pencil size={13} />
           </button>
         ) : null}
+        {showNote ? (
+          <button
+            type="button"
+            className={`note-button ${isNoteOpen ? 'is-open' : ''} ${
+              task.note?.trim() ? 'has-note' : ''
+            }`}
+            data-tooltip={task.note?.trim() ? '编辑备注' : '添加备注'}
+            aria-label={
+              task.note?.trim()
+                ? `编辑${task.title}备注`
+                : `为${task.title}添加备注`
+            }
+            aria-expanded={isNoteOpen}
+            onClick={() => {
+              setIsColorOpen(false)
+              setIsNoteOpen((current) => !current)
+            }}
+          >
+            <BookOpen size={13} />
+          </button>
+        ) : null}
         {onColor ? (
           <button
             type="button"
@@ -4916,7 +4927,10 @@ const TaskRow = memo(function TaskRow({
             data-tooltip="颜色"
             aria-label={`颜色：${taskColorLabel(taskColor)}。点击更改`}
             aria-expanded={isColorOpen}
-            onClick={() => setIsColorOpen((current) => !current)}
+            onClick={() => {
+              setIsNoteOpen(false)
+              setIsColorOpen((current) => !current)
+            }}
           >
             <span className="task-color-swatch" aria-hidden="true" />
           </button>
@@ -4947,6 +4961,25 @@ const TaskRow = memo(function TaskRow({
           <Trash2 size={13} />
         </button>
       </div>
+      {showNote && isNoteOpen ? (
+        <div
+          className="task-note-popover"
+          role="dialog"
+          aria-label={`${task.title}备注`}
+        >
+          <label className="task-note-control">
+            <span>备注</span>
+            <textarea
+              rows={3}
+              autoFocus
+              aria-label={`长期任务${task.title}备注`}
+              placeholder="添加备注…"
+              value={task.note ?? ''}
+              onChange={(event) => onNote?.(task.id, event.target.value)}
+            />
+          </label>
+        </div>
+      ) : null}
       {onColor && isColorOpen ? (
         <div className="task-color-popover">
           <TaskColorPalette

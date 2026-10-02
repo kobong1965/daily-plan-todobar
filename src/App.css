@@ -4897,6 +4897,37 @@ kbd {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-soft) 72%, transparent);
 }
 
+.task-note-popover {
+  position: absolute;
+  z-index: 280;
+  top: calc(100% + 7px);
+  right: 8px;
+  width: min(232px, calc(100% - 16px));
+  padding: 9px;
+  border: 1px solid color-mix(in srgb, #8b76ff 42%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--task-bg) 94%, #8b76ff 6%);
+  box-shadow:
+    0 14px 28px rgba(45, 37, 100, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.52);
+  animation: reminder-popover-in 150ms var(--ease-out);
+}
+
+.task-note-popover .task-note-control {
+  margin-top: 0;
+}
+
+.task-note-popover .task-note-control > span {
+  color: color-mix(in srgb, var(--ink) 78%, #6c5ce7);
+  font-size: 11px;
+}
+
+.task-note-popover .task-note-control textarea {
+  min-block-size: 66px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .pinned-list-stack {
   display: grid;
   gap: 0;
@@ -5307,6 +5338,30 @@ kbd {
   border-radius: 9px;
 }
 
+.note-button {
+  inline-size: 26px;
+  block-size: 26px;
+  flex-basis: 26px;
+  color: #7f89a1;
+  border-radius: 9px;
+}
+
+.note-button:hover,
+.note-button.is-open,
+.note-button.has-note {
+  color: #6757dc;
+  border-color: color-mix(in srgb, #8371ff 48%, var(--line));
+  background: color-mix(in srgb, #8371ff 12%, var(--control-bg));
+}
+
+.workspace.theme-dark .note-button:hover,
+.workspace.theme-dark .note-button.is-open,
+.workspace.theme-dark .note-button.has-note {
+  color: #b8aaff;
+  border-color: color-mix(in srgb, #a995ff 48%, var(--line));
+  background: color-mix(in srgb, #8e7cff 20%, var(--control-bg));
+}
+
 .color-button {
   inline-size: 26px;
   block-size: 26px;
@@ -5555,6 +5610,66 @@ kbd {
 
 .task-row.is-pulse-open .check-button {
   animation: check-surface-open 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Long-term work has its own visual lane so it reads as a persistent plan,
+   while the task color dot still keeps the user's selected classification. */
+.long-term-task-list .task-row {
+  --task-color: #7163e9;
+  --task-fill: color-mix(in srgb, #8174f4 18%, var(--task-bg));
+  --task-hover-fill: color-mix(in srgb, #a97dff 28%, var(--task-bg));
+  --task-border-color: color-mix(in srgb, #8778ef 56%, var(--line));
+  min-height: max(
+    62px,
+    calc(var(--task-title-size) * 3.75 + 20px)
+  );
+  background:
+    linear-gradient(
+      126deg,
+      color-mix(in srgb, #4e91ff 27%, var(--task-bg)),
+      color-mix(in srgb, #756cf7 25%, var(--task-bg)) 48%,
+      color-mix(in srgb, #cf83ff 25%, var(--task-bg))
+    );
+  border-color: color-mix(in srgb, #8778ef 56%, var(--line));
+  box-shadow:
+    0 7px 18px color-mix(in srgb, #675ee8 15%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.long-term-task-list .task-row:hover,
+.long-term-task-list .task-row:focus-within {
+  background:
+    linear-gradient(
+      126deg,
+      color-mix(in srgb, #4e91ff 35%, var(--task-bg)),
+      color-mix(in srgb, #756cf7 34%, var(--task-bg)) 48%,
+      color-mix(in srgb, #cf83ff 34%, var(--task-bg))
+    );
+  border-color: color-mix(in srgb, #8e7dff 72%, var(--line));
+}
+
+.long-term-task-list .task-row.is-complete {
+  background:
+    linear-gradient(
+      126deg,
+      color-mix(in srgb, #4e91ff 16%, var(--task-bg)),
+      color-mix(in srgb, #756cf7 15%, var(--task-bg)) 48%,
+      color-mix(in srgb, #cf83ff 16%, var(--task-bg))
+    );
+}
+
+.long-term-task-list .task-body strong {
+  font-size: calc(var(--task-title-size) * 1.5);
+  line-height: 1.24;
+}
+
+.long-term-task-list .task-body > span {
+  font-size: calc(var(--task-meta-size) * 1.5);
+  line-height: 1.28;
+}
+
+.long-term-task-list .task-note-popover {
+  width: min(260px, calc(100% - 16px));
 }
 
 .month-list .task-row {
