@@ -1,7 +1,7 @@
 # Release Verification v0.1.18
 
-This page records the local Windows verification for the long-term task visual
-and note-editor update. No public release was created in this pass.
+This page records the Windows verification and public distribution for the
+long-term task visual and note-editor update.
 
 ## Scope
 
@@ -28,4 +28,9 @@ and note-editor update. No public release was created in this pass.
 - Installed binary reports version `0.1.18` at
   `E:\\Codex工作盘\\apps\\Todobar\\todobar.exe`.
 - Desktop shortcut `D:\\桌面\\每日计划 Todobar.lnk` targets the updated binary.
+- Public source repository: `https://github.com/kobong1965/daily-plan-todobar`.
+- Public Windows portable package: `daily-plan-todobar-v0.1.18-windows-x64.zip`.
+- The package contains only the executable and usage/license files; browser
+  storage with local tasks, settings, account sessions, and credentials is
+  created separately by each installation and is not included.
 
